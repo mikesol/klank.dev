@@ -166,6 +166,7 @@ main = do
     $ Payload.start
         ( Payload.defaultOpts
             { port = fromMaybe 3000 (port >>= fromString)
+            , hostname = "127.0.0.1"
             }
         )
         spec
