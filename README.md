@@ -11,5 +11,5 @@ Rulez:
 ## Deploy server
 
 ```bash
-git push https://git.heroku.com/klank-api.git HEAD:master
+git subtree push --prefix server heroku master
 ```
