@@ -13,9 +13,45 @@
     </style>
   </head>
   <body>
-    <div id="editor">-- klank.dev
-plus a b = a + b
-    </div>
+    <div id="editor">-- Ctrl-K or Command-K to play
+-- Ctrl-X or Command-X to stop
+-- Documentaion at https://github.com/mikesol/purescript-audio-behaviors
+-- have fun
+module Klank.Dev where
+
+import Prelude
+import Data.List ((:), List(..))
+import Data.NonEmpty ((:|))
+import Data.Typelevel.Num (D1)
+import Effect (Effect)
+import FRP.Behavior (Behavior)
+import FRP.Behavior.Audio (AudioUnit, Instruction, gain', runInBrowser, sinOsc, speaker, simpleRun)
+import FRP.Behavior.Audio as Aud
+import Foreign (Foreign)
+import Math (pi, sin)
+
+scene :: Behavior Number -> Behavior (AudioUnit D1)
+scene time = f <$> time
+  where
+  f s =
+    let
+      rad = pi * s
+    in
+      speaker
+        $ ( (gain' 0.1 $ sinOsc (440.0 + (10.0 * sin (2.3 * rad))))
+              :| (gain' 0.25 $ sinOsc (235.0 + (10.0 * sin (1.7 * rad))))
+              : (gain' 0.2 $ sinOsc (337.0 + (10.0 * sin rad)))
+              : (gain' 0.1 $ sinOsc (530.0 + (19.0 * (5.0 * sin rad))))
+              : Nil
+          )
+
+-- change to true if you use `microphone` above
+enableMicrophone = false
+
+main :: Effect Unit
+main = do
+  _ <- simpleRun scene
+</div>
 
     <script
       src="/ace-builds/src-noconflict/ace.js"
@@ -24,8 +60,25 @@ plus a b = a + b
     ></script>
     <script>
       var editor = ace.edit("editor");
+      editor.setOption("showPrintMargin", false);
       editor.setTheme("ace/theme/monokai");
       editor.session.setMode("ace/mode/haskell");
+      editor.commands.addCommand({
+        name: 'play',
+        bindKey: {win: 'Ctrl-K',  mac: 'Command-K'},
+        exec: function(editor) {
+            alert('play');
+        },
+        readOnly: true // false if this command should not apply in readOnly mode
+      });
+      editor.commands.addCommand({
+        name: 'stop',
+        bindKey: {win: 'Ctrl-X',  mac: 'Command-X'},
+        exec: function(editor) {
+            alert('stop');
+        },
+        readOnly: true // false if this command should not apply in readOnly mode
+      });
     </script>
   </body>
 </html>
