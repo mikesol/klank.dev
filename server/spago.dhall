@@ -9,6 +9,7 @@ You can edit this file as you like.
   , "effect"
   , "node-child-process"
   , "node-fs"
+  , "node-process"
   , "payload"
   , "psci-support"
   , "sunde"

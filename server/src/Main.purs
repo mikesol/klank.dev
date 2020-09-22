@@ -10,11 +10,14 @@ import Data.String.Regex (regex, match)
 import Data.String.Regex.Flags (noFlags)
 import Data.UUID (genUUID, toString)
 import Effect (Effect)
-import Effect.Aff (Aff, bracket)
+import Effect.Aff (Aff, bracket, try)
 import Effect.Class (liftEffect)
-import Node.ChildProcess (Exit(..), defaultSpawnOptions)
+import Effect.Class.Console (log)
+import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
-import Node.FS.Sync (mkdir, rmdir, unlink, writeTextFile, readTextFile)
+import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
+import Node.Platform (Platform(..))
+import Node.Process (platform)
 import Payload.Server as Payload
 import Payload.Spec (Spec(Spec), POST)
 import Sunde (spawn)
@@ -54,19 +57,23 @@ compiler { body } =
     ( do
         uuid' <- liftEffect $ genUUID
         _ <- liftEffect $ mkdir ("deps/" <> (toString uuid'))
+        liftEffect $ log "Created dep"
         pure (toString uuid')
     )
     ( \uuid -> do
-        liftEffect $ rmdir ("deps/" <> uuid)
-        liftEffect $ unlink (uuid <> ".dhall")
+        liftEffect $ log "Deleting dep"
+        _ <- try (liftEffect $ unlink ("./deps/" <> uuid <> "/index.js"))
+        liftEffect $ unlink ("./deps/" <> uuid <> "/Main.purs")
+        liftEffect $ rmdir ("./deps/" <> uuid)
+        liftEffect $ unlink ("./deps/" <> uuid <> ".dhall")
     )
     ( \uuid -> do
         _ <-
           liftEffect
             $ writeTextFile
                 UTF8
-                (uuid <> ".dhall")
-                ("let conf = ./spago.dhall\nin conf // { sources = conf.sources # [ \"deps/" <> uuid <> "/Main.purs\" ] }")
+                ("deps/" <> uuid <> ".dhall")
+                ("let conf = ./spago.dhall\nin conf // { sources = conf.sources # [ \"" <> uuid <> "/Main.purs\" ] }")
         _ <-
           liftEffect
             $ writeTextFile
@@ -82,23 +89,26 @@ compiler { body } =
                 , "--main"
                 , hackishlyGetModule body.code
                 , "--to"
-                , "deps/" <> uuid <> "/index.js"
+                , uuid <> "/index.js"
                 ]
-            , cmd: "spago"
+            , cmd: if platform == Just Win32 then "spago.cmd" else "spago"
             , stdin: Nothing
             }
             defaultSpawnOptions
-        case whatHappened.exit of
-          (Normally 0) ->
-            ( do
-                res <-
-                  liftEffect
-                    $ readTextFile
-                        UTF8
-                        ("deps/" <> uuid <> "/index.js")
-                pure { res: Just res, error: Nothing }
-            )
-          _ -> pure { res: Nothing, error: Just whatHappened.stderr }
+              { cwd = Just "deps"
+              }
+        worked <- liftEffect $ exists ("deps/" <> uuid <> "/index.js")
+        if worked then
+          ( do
+              res <-
+                liftEffect
+                  $ readTextFile
+                      UTF8
+                      ("deps/" <> uuid <> "/index.js")
+              pure { res: Just res, error: Nothing }
+          )
+        else
+          pure { res: Nothing, error: Just whatHappened.stderr }
     )
 
 main :: Effect Unit
