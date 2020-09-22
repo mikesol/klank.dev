@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "postinstall": "spago install",
+    "start": "node index.js",
+    "postinstall": "spago install && spago build && spago bundle-app",
     "build": "spago build",
     "test": "spago test"
   },

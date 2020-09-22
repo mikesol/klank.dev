@@ -4,20 +4,20 @@ import Prelude
 import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
+import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (Pattern(..), split)
+import Data.String (Pattern(..), Replacement(..), replaceAll, split)
 import Data.String.Regex (regex, match)
 import Data.String.Regex.Flags (noFlags)
 import Data.UUID (genUUID, toString)
 import Effect (Effect)
-import Effect.Aff (Aff, bracket, try)
+import Effect.Aff (Aff, bracket, launchAff_, try)
 import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
 import Node.Platform (Platform(..))
-import Node.Process (platform)
+import Node.Process (lookupEnv, platform)
 import Payload.Server as Payload
 import Payload.Spec (Spec(Spec), POST)
 import Sunde (spawn)
@@ -29,6 +29,7 @@ type Code
 type Compiled
   = { res :: Maybe String
     , error :: Maybe String
+    , moduleName :: Maybe String
     }
 
 spec ::
@@ -51,18 +52,52 @@ hackishlyGetModule s = fromMaybe "Could.Not.Find.Module" (head $ (catMaybes $ ma
   where
   lines = split (Pattern "\n") s
 
+hackishlyRenameModule :: String -> String -> String -> Effect { code :: String, moduleName :: String }
+hackishlyRenameModule u cd m = do
+  let
+    moduleName = "A" <> (replaceAll (Pattern "-") (Replacement "") u)
+  pure
+    { code: (replaceAll (Pattern m) (Replacement moduleName) cd)
+    , moduleName
+    }
+
 compiler :: { body :: Code } -> Aff Compiled
 compiler { body } =
   bracket
     ( do
         uuid' <- liftEffect $ genUUID
         _ <- liftEffect $ mkdir ("deps/" <> (toString uuid'))
-        liftEffect $ log "Created dep"
         pure (toString uuid')
     )
     ( \uuid -> do
-        liftEffect $ log "Deleting dep"
-        _ <- try (liftEffect $ unlink ("./deps/" <> uuid <> "/index.js"))
+        let
+          moduleName =
+            "A"
+              <> (replaceAll (Pattern "-") (Replacement "") uuid)
+        _ <-
+          try
+            ( liftEffect
+                $ unlink
+                    ("./deps/" <> uuid <> "/index.js")
+            )
+        _ <-
+          try
+            ( liftEffect
+                $ unlink
+                    ("./output/" <> moduleName <> "/externs.cbor")
+            )
+        _ <-
+          try
+            ( liftEffect
+                $ unlink
+                    ("./output/" <> moduleName <> "/index.js")
+            )
+        _ <-
+          try
+            ( liftEffect
+                $ rmdir
+                    ("./output/" <> moduleName)
+            )
         liftEffect $ unlink ("./deps/" <> uuid <> "/Main.purs")
         liftEffect $ rmdir ("./deps/" <> uuid)
         liftEffect $ unlink ("./deps/" <> uuid <> ".dhall")
@@ -74,12 +109,17 @@ compiler { body } =
                 UTF8
                 ("deps/" <> uuid <> ".dhall")
                 ("let conf = ./spago.dhall\nin conf // { sources = conf.sources # [ \"" <> uuid <> "/Main.purs\" ] }")
+        let
+          mod = hackishlyGetModule body.code
+        renamed <-
+          liftEffect
+            $ hackishlyRenameModule uuid body.code mod
         _ <-
           liftEffect
             $ writeTextFile
                 UTF8
                 ("deps/" <> uuid <> "/Main.purs")
-                body.code
+                renamed.code
         whatHappened <-
           spawn
             { args:
@@ -87,7 +127,7 @@ compiler { body } =
                 , uuid <> ".dhall"
                 , "bundle-module"
                 , "--main"
-                , hackishlyGetModule body.code
+                , renamed.moduleName
                 , "--to"
                 , uuid <> "/index.js"
                 ]
@@ -105,11 +145,28 @@ compiler { body } =
                   $ readTextFile
                       UTF8
                       ("deps/" <> uuid <> "/index.js")
-              pure { res: Just res, error: Nothing }
+              pure
+                { res: Just res
+                , error: Nothing
+                , moduleName: Just renamed.moduleName
+                }
           )
         else
-          pure { res: Nothing, error: Just whatHappened.stderr }
+          pure
+            { res: Nothing
+            , error: Just whatHappened.stderr
+            , moduleName: Nothing
+            }
     )
 
 main :: Effect Unit
-main = Payload.launch spec { compiler }
+main = do
+  port <- lookupEnv "PORT"
+  launchAff_
+    $ Payload.start
+        ( Payload.defaultOpts
+            { port = fromMaybe 3000 (port >>= fromString)
+            }
+        )
+        spec
+        { compiler }
