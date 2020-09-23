@@ -1,12 +1,14 @@
 module Test.Main where
 
 import Prelude
+import Data.Either (either)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff_)
 import Main (compiler)
 import Test.Spec (describe, it)
-import Test.Spec.Assertions (shouldEqual, shouldNotEqual)
+import Test.Spec.Assertions (fail, shouldEqual, shouldNotEqual)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (defaultConfig, runSpec')
 
@@ -22,7 +24,10 @@ main =
                     { code: "module Foo.Bar.Baz where\nimport Prelude\nhello = \"hello\" :: String"
                     }
                 }
-            res.error `shouldEqual` Nothing
+            either
+              (const $ fail "Left")
+              (\i -> (unwrap i).body.error `shouldEqual` Nothing)
+              res
           it "Fails incorrect code" do
             res <-
               compiler
@@ -30,4 +35,7 @@ main =
                     { code: "m"
                     }
                 }
-            res.error `shouldNotEqual` Nothing
+            either
+              (const $ fail "Left")
+              (\i -> (unwrap i).body.error `shouldNotEqual` Nothing)
+              res

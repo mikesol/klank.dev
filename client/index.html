@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>klank.dev</title>
+    <script src="audioloop.js"></script>
     <style type="text/css" media="screen">
       #editor {
         position: absolute;
@@ -11,7 +12,7 @@
         left: 0;
         height: 80%;
       }
-      #console {
+      #info {
         position: absolute;
         right: 0;
         bottom: 0;
@@ -22,16 +23,13 @@
   </head>
   <body>
     <div id="editor">module Klank.Dev where
-
+-- new to purescript? check out https://www.purescript.org/ for learning resources!
 import Prelude
 import Data.List ((:), List(..))
 import Data.NonEmpty ((:|))
 import Data.Typelevel.Num (D1)
-import Effect (Effect)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioUnit, Instruction, gain', runInBrowser, sinOsc, speaker, simpleRun)
-import FRP.Behavior.Audio as Aud
-import Foreign (Foreign)
+import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser_, sinOsc, speaker)
 import Math (pi, sin)
 
 scene :: Behavior Number -> Behavior (AudioUnit D1)
@@ -52,16 +50,10 @@ scene time = f <$> time
 -- change to true if you use `microphone` above
 enableMicrophone = false
 
-main :: Effect Unit
-main = do
-  _ <- simpleRun scene
+-- add a mouse, keyboard or other device here if needed
+main = runInBrowser_ (pure scene)
 </div>
-  <div id="console"># Welcome to klank.dev!
-- Press Ctrl-K (Win/Linux) or Command-K (Mac) to play the current audio scene
-- Press Ctrl-X (Win/Linux) or Command-X (Mac) to stop playback
-- Press Ctrl-C (Win/Linux) or Command-C (Mac) to recompile the scene when you make changes
-- Documentaion, feature requests, and issues on [GitHub](https://github.com/mikesol/purescript-audio-behaviors) _ctrl-click on link to open_
-- Have fun 🔊 🎧
+  <div id="info">
   </div>
     <script
       src="/ace-builds/src-noconflict/ace.js"
@@ -74,38 +66,145 @@ main = do
       charset="utf-8"
     ></script>
     <script>
+      ////////////////////////////// workers
+      var n = 8;
+      var workers = [];
+      for (var i = 0; i < n; i++) {
+        var w = new Worker("glpk-worker.js");
+        workers.push(w);
+        w.queue = [];
+        w.onmessage = function (e) {
+          if (e.data.initialized) {
+            return;
+          }
+          var s = this.queue.shift();
+          var o = e.data;
+          return o.result.status !== 5 ? s[1]("Error") : s[0](o.result.vars);
+        };
+        w.onerror = function (err) {
+          var s = this.queue.shift();
+          s[1](err);
+        };
+      }
+      var offCb = null;
+      var audioCtx = null;
+      //////////////////////////////////////
+      var terminalWelcome = `# Welcome to klank.dev!
+**🔊 🎧 in the browser using PureScript.**
+- Press Ctrl-K (Win/Linux) or Command-K (Mac) to play the current audio scene
+- Press Ctrl-H (Win/Linux) or Command-H (Mac) to stop playback
+- Press Ctrl-J (Win/Linux) or Command-J (Mac) to recompile the scene when you make changes
+- Documentaion, feature requests, and issues on [GitHub](https://github.com/mikesol/purescript-audio-behaviors) _ctrl-click on link to open_
+`;
+      var globalAudioHack = null;
       var editor = ace.edit("editor");
       editor.setOption("showPrintMargin", false);
       editor.setTheme("ace/theme/monokai");
       editor.session.setMode("ace/mode/haskell");
-      editor.commands.addCommand({
-        name: 'play',
-        bindKey: {win: 'Ctrl-K',  mac: 'Command-K'},
-        exec: function(editor) {
-            alert('play');
-        },
-        readOnly: true // false if this command should not apply in readOnly mode
-      });
-      editor.commands.addCommand({
-        name: 'stop',
-        bindKey: {win: 'Ctrl-X',  mac: 'Command-X'},
-        exec: function(editor) {
-            alert('stop');
-        },
-        readOnly: true // false if this command should not apply in readOnly mode
-      });
-      var console = ace.edit("console");
-      console.setReadOnly(true);
-      console.setOption("showPrintMargin", false);
-      console.setOption("showLineNumbers", false);
-      // console.setOption("showGutter", false);
-      console.session.setMode("ace/mode/markdown");
-      console.setOptions({
+
+      var info = ace.edit("info");
+      info.setReadOnly(true);
+      info.setValue(terminalWelcome);
+      info.setOption("showPrintMargin", false);
+      info.setOption("showLineNumbers", false);
+      // info.setOption("showGutter", false);
+      info.session.setMode("ace/mode/markdown");
+      info.setOptions({
         enableLinking: true
       });
-      console.on("linkClick", function() {
+      info.on("linkClick", function() {
         window.open("https://github.com/mikesol/purescript-audio-behaviors");
       });
+      var acectx = [editor, info];
+      ////////////////////////////
+      /////////////////
+        
+
+
+    /////////////////////
+      for (var i = 0; i < 2; i++) {
+        acectx[i].commands.addCommand({
+          name: 'play',
+          bindKey: {win: 'Ctrl-K',  mac: 'Command-K'},
+          exec: function(editor) {
+            if (globalAudioHack.error) {
+              info.setValue("> Current audio is in an error state. Please Ctrl-J or Command-J to recompile without errors. Here is the most recent error stack: \n"+globalAudioHack.error);
+              return;
+            }
+            (globalAudioHack.enableMicrophone ? navigator.mediaDevices.getUserMedia({ audio: true }) : Promise.resolve(null)).then(function (mic) {
+              audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+              audioCtx.audioWorklet.addModule("ps-aud-mul.js").then(function () {
+                var now = new Date().getTime();
+                var ctr = 0;
+                // null for the microphone
+                offCb = globalAudioHack.main(15)(10)(audioCtx)(
+                  mic
+                )({})(workers)(function (timeToSet) {
+                  return function (instructions) {
+                    return function (ctx) {
+                      return function (stream) {
+                        return function (sources) {
+                          return function (units) {
+                            return function () {
+                              touchAudio()(timeToSet)(instructions)(ctx)(stream)(
+                                sources
+                              )(units)();
+                            };
+                          };
+                        };
+                      };
+                    };
+                  };
+                })();
+              });
+            });
+          },
+          readOnly: true // false if this command should not apply in readOnly mode
+        });
+        acectx[i].commands.addCommand({
+          name: 'stop',
+          bindKey: {win: 'Ctrl-H',  mac: 'Command-H'},
+          exec: function(editor) {
+            offCb ? offCb() : null;
+            offCB = null;
+            audioCtx ? audioCtx.close() : null;
+            audioCtx = null;
+          },
+          readOnly: true // false if this command should not apply in readOnly mode
+        });
+        acectx[i].commands.addCommand({
+          name: 'compile',
+          bindKey: {win: 'Ctrl-J',  mac: 'Command-J'},
+          exec: function(editor) {
+              info.setValue("# Compiling.\n**Please be patient.**\n_We couldn't afford a spinny animation so this text will have to do._");
+              fetch("https://klank-dev.ew.r.appspot.com/", {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin':'*',
+                  'Access-Control-Expose-Headers': 'Content-Length' 
+                },
+                body: JSON.stringify({code: editor.getValue()})
+              }).then(function(r){ return r.json();}).then(function(res){
+                console.log("Res", res);
+                if (res.error) {
+                  info.setValue("There was an error compiling your code.\n"+res.error);
+                } else {
+                  eval(res.res.split("\n").slice(-1).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
+                  info.setValue("> Successful compilation!\n"+terminalWelcome);
+                  globalAudioHack = res;
+                }
+              }, function(e) {
+                console.error(e);
+                alert("An unexpected error occurred during compilation. Please try again.");
+                info.setValue(terminalWelcome);
+              });
+          },
+          readOnly: true // false if this command should not apply in readOnly mode
+        });
+      }
+      editor.focus();
     </script>
   </body>
 </html>
