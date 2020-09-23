@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>klank.dev</title>
     <script src="audioloop.js"></script>
+    <script src="initialps.js"></script>
     <style type="text/css" media="screen">
       #editor {
         position: absolute;
@@ -92,8 +93,8 @@ main = runInBrowser_ (pure scene)
       var terminalWelcome = `# Welcome to klank.dev!
 **🔊 🎧 in the browser using PureScript.**
 - Press Ctrl-K (Win/Linux) or Command-K (Mac) to play the current audio scene
-- Press Ctrl-H (Win/Linux) or Command-H (Mac) to stop playback
-- Press Ctrl-J (Win/Linux) or Command-J (Mac) to recompile the scene when you make changes
+- Press Ctrl-J (Win/Linux) or Command-J (Mac) to stop playback
+- Press Ctrl-H (Win/Linux) or Command-H (Mac) to recompile the scene when you make changes
 - Documentaion, feature requests, and issues on [GitHub](https://github.com/mikesol/purescript-audio-behaviors) _ctrl-click on link to open_
 `;
       var globalAudioHack = null;
@@ -137,7 +138,7 @@ main = runInBrowser_ (pure scene)
                 var now = new Date().getTime();
                 var ctr = 0;
                 // null for the microphone
-                offCb = globalAudioHack.main(15)(10)(audioCtx)(
+                offCb = globalAudioHack.main()()(15)(10)(audioCtx)(
                   mic
                 )({})(workers)(function (timeToSet) {
                   return function (instructions) {
@@ -146,7 +147,7 @@ main = runInBrowser_ (pure scene)
                         return function (sources) {
                           return function (units) {
                             return function () {
-                              touchAudio()(timeToSet)(instructions)(ctx)(stream)(
+                              return touchAudio()(timeToSet)(instructions)(ctx)(stream)(
                                 sources
                               )(units)();
                             };
@@ -156,14 +157,14 @@ main = runInBrowser_ (pure scene)
                     };
                   };
                 })();
-              });
+              }, function(e){console.error(e)});
             });
           },
           readOnly: true // false if this command should not apply in readOnly mode
         });
         acectx[i].commands.addCommand({
           name: 'stop',
-          bindKey: {win: 'Ctrl-H',  mac: 'Command-H'},
+          bindKey: {win: 'Ctrl-J',  mac: 'Command-J'},
           exec: function(editor) {
             offCb ? offCb() : null;
             offCB = null;
@@ -174,7 +175,7 @@ main = runInBrowser_ (pure scene)
         });
         acectx[i].commands.addCommand({
           name: 'compile',
-          bindKey: {win: 'Ctrl-J',  mac: 'Command-J'},
+          bindKey: {win: 'Ctrl-H',  mac: 'Command-H'},
           exec: function(editor) {
               info.setValue("# Compiling.\n**Please be patient.**\n_We couldn't afford a spinny animation so this text will have to do._");
               fetch("https://klank-dev.ew.r.appspot.com/", {
@@ -185,11 +186,10 @@ main = runInBrowser_ (pure scene)
                 },
                 body: JSON.stringify({code: editor.getValue()})
               }).then(function(r){ return r.json();}).then(function(res){
-                console.log("Res", res);
                 if (res.error) {
                   info.setValue("There was an error compiling your code.\n"+res.error);
                 } else {
-                  eval(res.res.split("\n").slice(-1).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
+                  eval(res.res.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
                   info.setValue("> Successful compilation!\n"+terminalWelcome);
                   globalAudioHack = res;
                 }
@@ -202,6 +202,7 @@ main = runInBrowser_ (pure scene)
           readOnly: true // false if this command should not apply in readOnly mode
         });
       }
+      eval(initialPS.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\"A7e39a3464be54378946438f55fb8048c\"];");
       editor.focus();
     </script>
   </body>
