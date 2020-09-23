@@ -3,7 +3,7 @@ module Main where
 import Prelude
 import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
-import Data.Either (Either(..), either)
+import Data.Either (either)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll, split)
@@ -18,10 +18,7 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
 import Node.Platform (Platform(..))
 import Node.Process (lookupEnv, platform)
-import Payload.Headers (set)
-import Payload.ResponseTypes (Failure, Response)
 import Payload.Server as Payload
-import Payload.Server.Response (ok, updateHeaders)
 import Payload.Spec (Spec(Spec), POST)
 import Sunde (spawn)
 
@@ -64,11 +61,7 @@ hackishlyRenameModule u cd m = do
     , moduleName
     }
 
-compiler ::
-  { body :: Code } ->
-  Aff
-    ( Either Failure (Response Compiled)
-    )
+compiler :: { body :: Code } -> Aff Compiled
 compiler { body } =
   bracket
     ( do
@@ -153,24 +146,17 @@ compiler { body } =
                       UTF8
                       ("deps/" <> uuid <> "/index.js")
               pure
-                ( Right $ updateHeaders (set "Access-Control-Allow-Headers" "Origin, X-Requested-With, Content-Type, Accept, Content-Length" <<< set "Access-Control-Allow-Origin" "*")
-                    $ ok
-                        { res: Just res
-                        , error: Nothing
-                        , moduleName: Just renamed.moduleName
-                        }
-                )
+                { res: Just res
+                , error: Nothing
+                , moduleName: Just renamed.moduleName
+                }
           )
         else
-          ( pure
-              ( Right $ updateHeaders (set "Access-Control-Allow-Headers" "Origin, X-Requested-With, Content-Type, Accept, Content-Length" <<< set "Access-Control-Allow-Origin" "*")
-                  $ ok
-                      { res: Nothing
-                      , error: Just whatHappened.stderr
-                      , moduleName: Nothing
-                      }
-              )
-          )
+          pure
+            { res: Nothing
+            , error: Just whatHappened.stderr
+            , moduleName: Nothing
+            }
     )
 
 main :: Effect Unit

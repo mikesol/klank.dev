@@ -181,9 +181,7 @@ main = runInBrowser_ (pure scene)
                 method: 'POST',
                 mode: 'cors',
                 headers: {
-                  'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin':'*',
-                  'Access-Control-Expose-Headers': 'Content-Length' 
+                  'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({code: editor.getValue()})
               }).then(function(r){ return r.json();}).then(function(res){
