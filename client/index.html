@@ -1,23 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta charset="utf-8">
     <title>klank.dev</title>
     <style type="text/css" media="screen">
       #editor {
         position: absolute;
         top: 0;
         right: 0;
+        left: 0;
+        height: 80%;
+      }
+      #console {
+        position: absolute;
+        right: 0;
         bottom: 0;
         left: 0;
+        height: 20%
       }
     </style>
   </head>
   <body>
-    <div id="editor">-- Ctrl-K or Command-K to play
--- Ctrl-X or Command-X to stop
--- Documentaion, feature requests, and issues at https://github.com/mikesol/purescript-audio-behaviors
--- have fun
-module Klank.Dev where
+    <div id="editor">module Klank.Dev where
 
 import Prelude
 import Data.List ((:), List(..))
@@ -52,9 +56,20 @@ main :: Effect Unit
 main = do
   _ <- simpleRun scene
 </div>
-
+  <div id="console"># Welcome to klank.dev!
+- Press Ctrl-K (Win/Linux) or Command-K (Mac) to play the current audio scene
+- Press Ctrl-X (Win/Linux) or Command-X (Mac) to stop playback
+- Press Ctrl-C (Win/Linux) or Command-C (Mac) to recompile the scene when you make changes
+- Documentaion, feature requests, and issues on [GitHub](https://github.com/mikesol/purescript-audio-behaviors) _ctrl-click on link to open_
+- Have fun 🔊 🎧
+  </div>
     <script
       src="/ace-builds/src-noconflict/ace.js"
+      type="text/javascript"
+      charset="utf-8"
+    ></script>
+    <script
+      src="/ace-builds/src-noconflict/ext-linking.js"
       type="text/javascript"
       charset="utf-8"
     ></script>
@@ -78,6 +93,18 @@ main = do
             alert('stop');
         },
         readOnly: true // false if this command should not apply in readOnly mode
+      });
+      var console = ace.edit("console");
+      console.setReadOnly(true);
+      console.setOption("showPrintMargin", false);
+      console.setOption("showLineNumbers", false);
+      // console.setOption("showGutter", false);
+      console.session.setMode("ace/mode/markdown");
+      console.setOptions({
+        enableLinking: true
+      });
+      console.on("linkClick", function() {
+        window.open("https://github.com/mikesol/purescript-audio-behaviors");
       });
     </script>
   </body>
