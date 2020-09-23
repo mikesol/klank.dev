@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "postinstall": "spago install && spago build",
+    "postinstall": "spago install && spago build && cd deps && spago install && spago build && cd ..",
     "build": "spago build",
     "test": "spago test"
   },
