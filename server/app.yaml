@@ -1,2 +1,6 @@
 runtime: nodejs12
-instance_class: F4
+env: flex
+resources:
+  cpu: 2
+  memory_gb: 2
+  disk_size_gb: 16
