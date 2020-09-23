@@ -1,4 +1,4 @@
-runtime: nodejs12
+runtime: nodejs
 env: flex
 resources:
   cpu: 2
