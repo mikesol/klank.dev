@@ -10,7 +10,6 @@ You can edit this file as you like.
   , "node-child-process"
   , "node-fs"
   , "node-process"
-  , "payload"
   , "profunctor-lenses"
   , "psci-support"
   , "sunde"

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "postinstall": "spago install && spago build && spago bundle-app",
+    "postinstall": "spago install && spago build",
     "build": "spago build",
     "test": "spago test"
   },
@@ -13,6 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "helmet": "^4.1.1",
     "purescript": "^0.13.8",
     "spago": "^0.16.0"
   }

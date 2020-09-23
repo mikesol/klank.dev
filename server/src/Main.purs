@@ -4,22 +4,19 @@ import Prelude
 import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
-import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll, split)
 import Data.String.Regex (regex, match)
 import Data.String.Regex.Flags (noFlags)
 import Data.UUID (genUUID, toString)
 import Effect (Effect)
-import Effect.Aff (Aff, bracket, launchAff_, try)
+import Effect.Aff (Aff, bracket, try)
 import Effect.Class (liftEffect)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
 import Node.Platform (Platform(..))
-import Node.Process (lookupEnv, platform)
-import Payload.Server as Payload
-import Payload.Spec (Spec(Spec), POST)
+import Node.Process ( platform)
 import Sunde (spawn)
 
 type Code
@@ -31,16 +28,6 @@ type Compiled
     , error :: Maybe String
     , moduleName :: Maybe String
     }
-
-spec ::
-  Spec
-    { compiler ::
-        POST "/"
-          { body :: Code
-          , response :: Compiled
-          }
-    }
-spec = Spec
 
 extractModule :: String -> Maybe String
 extractModule s = either (const Nothing) (\p -> match p s >>= \a -> (join <<< head <<< tail) a) re
@@ -159,15 +146,7 @@ compiler { body } =
             }
     )
 
-main :: Effect Unit
-main = do
-  port <- lookupEnv "PORT"
-  launchAff_
-    $ Payload.start
-        ( Payload.defaultOpts
-            { port = fromMaybe 3000 (port >>= fromString)
-            , hostname = "0.0.0.0"
-            }
-        )
-        spec
-        { compiler }
+compile :: { body :: Code } -> (Compiled -> Effect Unit) -> Aff Unit
+compile { body } cb = do
+  res <- compiler {body}
+  liftEffect $ cb res
