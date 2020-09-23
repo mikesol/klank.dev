@@ -11,11 +11,11 @@ app.post("/", bodyParser.json(), function (req, res) {
   if (!req.body.code) {
     throw new Error("Need a code param");
   }
-  ps.compile(req.body)(function (r) {
+  ps.compile(req)(function (r) {
     return function () {
-      res.json(r);
+      res.json(JSON.parse(r));
     };
-  });
+  })();
 });
 
 app.listen(process.env.PORT || 3000, () => {

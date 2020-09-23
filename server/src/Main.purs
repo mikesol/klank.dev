@@ -1,6 +1,7 @@
 module Main where
 
 import Prelude
+
 import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
@@ -10,13 +11,15 @@ import Data.String.Regex (regex, match)
 import Data.String.Regex.Flags (noFlags)
 import Data.UUID (genUUID, toString)
 import Effect (Effect)
-import Effect.Aff (Aff, bracket, try)
+import Effect.Aff (Aff, bracket, launchAff_, try)
 import Effect.Class (liftEffect)
+import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
 import Node.Platform (Platform(..))
-import Node.Process ( platform)
+import Node.Process (platform)
+import Simple.JSON (writeJSON)
 import Sunde (spawn)
 
 type Code
@@ -146,7 +149,7 @@ compiler { body } =
             }
     )
 
-compile :: { body :: Code } -> (Compiled -> Effect Unit) -> Aff Unit
-compile { body } cb = do
+compile :: { body :: Code } -> (String -> Effect Unit) -> Effect Unit
+compile { body } cb = launchAff_ do
   res <- compiler {body}
-  liftEffect $ cb res
+  liftEffect $ cb (writeJSON res)
