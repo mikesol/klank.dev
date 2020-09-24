@@ -67,9 +67,8 @@ main = runInBrowser_ (pure scene)
 </div>
   <div id="info"># Welcome to klank.dev!
 **🔊 🎧 in the browser using PureScript.**
-- Press Ctrl-K (Win/Linux) or Command-K (Mac) to play the current audio scene
-- Press Ctrl-J (Win/Linux) or Command-J (Mac) to stop playback
-- Press Ctrl-H (Win/Linux) or Command-H (Mac) to recompile the scene when you make changes
+- Press Ctrl-K (Win/Linux) or Command-K (Mac) to start/stop the current audio scene
+- Press Ctrl-J (Win/Linux) or Command-J (Mac) to recompile the scene when you make changes
 - Documentaion, feature requests, and issues on [GitHub](https://github.com/mikesol/purescript-audio-behaviors) _ctrl-click on link to open_
   </div>
     <script>
@@ -128,59 +127,58 @@ main = runInBrowser_ (pure scene)
 
 
     /////////////////////
+    var playing = false;
       for (var i = 0; i < 2; i++) {
         acectx[i].commands.addCommand({
           name: 'play',
           bindKey: {win: 'Ctrl-K',  mac: 'Command-K'},
           exec: function(editor) {
-            if (globalAudioHack.error) {
-              info.setValue("> Current audio is in an error state. Please Ctrl-J or Command-J to recompile without errors. Here is the most recent error stack: \n"+globalAudioHack.error);
-              return;
-            }
-            (globalAudioHack.enableMicrophone ? navigator.mediaDevices.getUserMedia({ audio: true }) : Promise.resolve(null)).then(function (mic) {
-              audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-              audioCtx.audioWorklet.addModule("ps-aud-mul.js").then(function () {
-                var now = new Date().getTime();
-                var ctr = 0;
-                // null for the microphone
-                offCb = globalAudioHack.main()()(15)(10)(audioCtx)(
-                  mic
-                )({})(workers)(function (timeToSet) {
-                  return function (instructions) {
-                    return function (ctx) {
-                      return function (stream) {
-                        return function (sources) {
-                          return function (units) {
-                            return function () {
-                              return touchAudio()(timeToSet)(instructions)(ctx)(stream)(
-                                sources
-                              )(units)();
+            if (playing) {
+              offCb ? offCb() : null;
+              offCB = null;
+              audioCtx ? audioCtx.close() : null;
+              audioCtx = null;
+              playing = false;
+            } else {
+              if (globalAudioHack.error) {
+                info.setValue("> Current audio is in an error state. Please Ctrl-J or Command-J to recompile without errors. Here is the most recent error stack: \n"+globalAudioHack.error);
+                return;
+              }
+              (globalAudioHack.enableMicrophone ? navigator.mediaDevices.getUserMedia({ audio: true }) : Promise.resolve(null)).then(function (mic) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioCtx.audioWorklet.addModule("ps-aud-mul.js").then(function () {
+                  var now = new Date().getTime();
+                  var ctr = 0;
+                  // null for the microphone
+                  offCb = globalAudioHack.main()()(15)(10)(audioCtx)(
+                    mic
+                  )({})(workers)(function (timeToSet) {
+                    return function (instructions) {
+                      return function (ctx) {
+                        return function (stream) {
+                          return function (sources) {
+                            return function (units) {
+                              return function () {
+                                return touchAudio()(timeToSet)(instructions)(ctx)(stream)(
+                                  sources
+                                )(units)();
+                              };
                             };
                           };
                         };
                       };
                     };
-                  };
-                })();
-              }, function(e){console.error(e)});
-            });
-          },
-          readOnly: true // false if this command should not apply in readOnly mode
-        });
-        acectx[i].commands.addCommand({
-          name: 'stop',
-          bindKey: {win: 'Ctrl-J',  mac: 'Command-J'},
-          exec: function(editor) {
-            offCb ? offCb() : null;
-            offCB = null;
-            audioCtx ? audioCtx.close() : null;
-            audioCtx = null;
+                  })();
+                }, function(e){console.error(e)});
+              });
+              playing = true;
+            }
           },
           readOnly: true // false if this command should not apply in readOnly mode
         });
         acectx[i].commands.addCommand({
           name: 'compile',
-          bindKey: {win: 'Ctrl-H',  mac: 'Command-H'},
+          bindKey: {win: 'Ctrl-J',  mac: 'Command-J'},
           exec: function(editor) {
               info.setValue("# Compiling.\n**Please be patient.**\nWe couldn't afford a spinny animation so this text will have to do.");
               fetch("https://klank-dev.ew.r.appspot.com/", {
