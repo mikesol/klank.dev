@@ -84,6 +84,8 @@ main = runInBrowser_ (pure scene)
 - Documentaion, feature requests, and issues on [GitHub](https://github.com/mikesol/purescript-audio-behaviors) _ctrl-click on link to open_
   </div>
     <script>
+      var forest = new Audio("forest.mp3");
+
       ////////////////////////////// workers
       var n = 8;
       var workers = [];
@@ -196,7 +198,9 @@ main = runInBrowser_ (pure scene)
                   // null for the microphone
                   offCb = globalAudioHack.main()()(15)(10)(audioCtx)(
                     mic
-                  )({})(workers)(function (timeToSet) {
+                  )({
+                    forest
+                  })(workers)(function (timeToSet) {
                     return function (instructions) {
                       return function (ctx) {
                         return function (stream) {
