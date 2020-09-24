@@ -104,6 +104,7 @@ main = runInBrowser_ (pure scene)
           s[1](err);
         };
       }
+      
       var offCb = null;
       // this ctx won't be used, but it may load the audio faster
       var audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
@@ -119,8 +120,7 @@ main = runInBrowser_ (pure scene)
       editor.setOption("showPrintMargin", false);
       editor.setTheme("ace/theme/monokai");
       editor.session.setMode("ace/mode/haskell");
-
-      var info = ace.edit("info");
+            var info = ace.edit("info");
       info.setReadOnly(true);
       info.setOption("showPrintMargin", false);
       info.setOption("showLineNumbers", false);
@@ -132,6 +132,41 @@ main = runInBrowser_ (pure scene)
       info.on("linkClick", function() {
         window.open("https://github.com/mikesol/purescript-audio-behaviors");
       });
+
+      function compileMe() {
+        info.setValue("# Compiling.\n**Please be patient.**\nWe couldn't afford a spinny animation so this text will have to do.");
+        fetch("https://klank-dev.ew.r.appspot.com/", {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({code: editor.getValue()})
+        }).then(function(r){ return r.json();}).then(function(res){
+          if (res.error) {
+            info.setValue("> There was an error compiling your code. Please fix and recompile with Ctrl-J or Command-J.\nHere is the error report: \n"+res.error);
+          } else {
+            eval(res.res.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
+            info.setValue("> Successful compilation!\n"+terminalWelcome);
+          }
+        }, function(e) {
+          console.error(e);
+          alert("An unexpected error occurred during compilation. Please try again.");
+          info.setValue(terminalWelcome);
+        });
+      }
+      var urlParams = new URLSearchParams(window.location.search);
+      var gist = urlParams.get('gist');
+      if (gist) {
+        fetch("https://api.github.com/gists/"+gist).then(function(r) {
+          return r.json();
+        }).then(function(r) {
+          var code = r.files[Object.keys(r.files)[0]].content;
+          editor.setValue(code);
+          compileMe();
+        });
+      }
+
       var acectx = [editor, info];
       ////////////////////////////
       /////////////////
@@ -190,26 +225,7 @@ main = runInBrowser_ (pure scene)
           name: 'compile',
           bindKey: {win: 'Ctrl-J',  mac: 'Command-J'},
           exec: function(editor) {
-              info.setValue("# Compiling.\n**Please be patient.**\nWe couldn't afford a spinny animation so this text will have to do.");
-              fetch("https://klank-dev.ew.r.appspot.com/", {
-                method: 'POST',
-                mode: 'cors',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({code: editor.getValue()})
-              }).then(function(r){ return r.json();}).then(function(res){
-                if (res.error) {
-                  info.setValue("> There was an error compiling your code. Please fix and recompile with Ctrl-J or Command-J.\nHere is the error report: \n"+res.error);
-                } else {
-                  eval(res.res.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
-                  info.setValue("> Successful compilation!\n"+terminalWelcome);
-                }
-              }, function(e) {
-                console.error(e);
-                alert("An unexpected error occurred during compilation. Please try again.");
-                info.setValue(terminalWelcome);
-              });
+              compileMe();
           },
           readOnly: true // false if this command should not apply in readOnly mode
         });
