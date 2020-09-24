@@ -105,7 +105,8 @@ main = runInBrowser_ (pure scene)
         };
       }
       var offCb = null;
-      var audioCtx = null;
+      // this ctx won't be used, but it may load the audio faster
+      var audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
       //////////////////////////////////////
       var terminalWelcome = `# Welcome to klank.dev!
 **🔊 🎧 in the browser using PureScript.**
