@@ -152,10 +152,6 @@ main = runInBrowser_ (pure scene)
               audioCtx = null;
               playing = false;
             } else {
-              if (globalAudioHack.error) {
-                info.setValue("> Current audio is in an error state. Please Ctrl-J or Command-J to recompile without errors. Here is the most recent error stack: \n"+globalAudioHack.error);
-                return;
-              }
               (globalAudioHack.enableMicrophone ? navigator.mediaDevices.getUserMedia({ audio: true }) : Promise.resolve(null)).then(function (mic) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 audioCtx.audioWorklet.addModule("ps-aud-mul.js").then(function () {
@@ -202,7 +198,7 @@ main = runInBrowser_ (pure scene)
                 body: JSON.stringify({code: editor.getValue()})
               }).then(function(r){ return r.json();}).then(function(res){
                 if (res.error) {
-                  info.setValue("There was an error compiling your code.\n"+res.error);
+                  info.setValue("> There was an error compiling your code. Please fix and recompile with Ctrl-J or Command-J.\nHere is the error report: \n"+res.error);
                 } else {
                   eval(res.res.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
                   info.setValue("> Successful compilation!\n"+terminalWelcome);
