@@ -1,3 +1,0 @@
-glpk-worker.js filter=lfs diff=lfs merge=lfs -text
-glpk-worker.wasm filter=lfs diff=lfs merge=lfs -text
-initialps.js filter=lfs diff=lfs merge=lfs -text

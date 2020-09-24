@@ -77,7 +77,7 @@ main = runInBrowser_ (pure scene)
       var n = 8;
       var workers = [];
       for (var i = 0; i < n; i++) {
-        var w = new Worker("glpk-worker.js");
+        var w = new Worker("glpk.js/glpk-worker.js");
         workers.push(w);
         w.queue = [];
         w.onmessage = function (e) {
