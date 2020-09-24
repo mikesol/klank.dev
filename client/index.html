@@ -88,7 +88,7 @@ main = runInBrowser_ (pure scene)
       var n = 8;
       var workers = [];
       for (var i = 0; i < n; i++) {
-        var w = new Worker("glpk.js/glpk-worker.js");
+        var w = new Worker("glpk-worker.js");
         workers.push(w);
         w.queue = [];
         w.onmessage = function (e) {
@@ -152,6 +152,7 @@ main = runInBrowser_ (pure scene)
               audioCtx = null;
               playing = false;
             } else {
+              info.setValue("# Wait for awesomeness.");
               (globalAudioHack.enableMicrophone ? navigator.mediaDevices.getUserMedia({ audio: true }) : Promise.resolve(null)).then(function (mic) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 audioCtx.audioWorklet.addModule("ps-aud-mul.js").then(function () {
@@ -179,6 +180,7 @@ main = runInBrowser_ (pure scene)
                   })();
                 }, function(e){console.error(e)});
               });
+              info.setValue(terminalWelcome);
               playing = true;
             }
           },
