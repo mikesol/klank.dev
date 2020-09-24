@@ -54,7 +54,12 @@ enableMicrophone = false
 -- add a mouse, keyboard or other device here if needed
 main = runInBrowser_ (pure scene)
 </div>
-  <div id="info">
+  <div id="info"># Welcome to klank.dev!
+**🔊 🎧 in Firefox using PureScript.**
+- Press Ctrl-K (Win/Linux) or Command-K (Mac) to play the current audio scene
+- Press Ctrl-J (Win/Linux) or Command-J (Mac) to stop playback
+- Press Ctrl-H (Win/Linux) or Command-H (Mac) to recompile the scene when you make changes
+- Documentaion, feature requests, and issues on [GitHub](https://github.com/mikesol/purescript-audio-behaviors) _ctrl-click on link to open_
   </div>
     <script
       src="/ace-builds/src-noconflict/ace.js"
@@ -91,7 +96,7 @@ main = runInBrowser_ (pure scene)
       var audioCtx = null;
       //////////////////////////////////////
       var terminalWelcome = `# Welcome to klank.dev!
-**🔊 🎧 in the browser using PureScript.**
+**🔊 🎧 in Firefox using PureScript.**
 - Press Ctrl-K (Win/Linux) or Command-K (Mac) to play the current audio scene
 - Press Ctrl-J (Win/Linux) or Command-J (Mac) to stop playback
 - Press Ctrl-H (Win/Linux) or Command-H (Mac) to recompile the scene when you make changes
@@ -105,7 +110,6 @@ main = runInBrowser_ (pure scene)
 
       var info = ace.edit("info");
       info.setReadOnly(true);
-      info.setValue(terminalWelcome);
       info.setOption("showPrintMargin", false);
       info.setOption("showLineNumbers", false);
       // info.setOption("showGutter", false);
@@ -177,7 +181,7 @@ main = runInBrowser_ (pure scene)
           name: 'compile',
           bindKey: {win: 'Ctrl-H',  mac: 'Command-H'},
           exec: function(editor) {
-              info.setValue("# Compiling.\n**Please be patient.**\n_We couldn't afford a spinny animation so this text will have to do._");
+              info.setValue("# Compiling.\n**Please be patient.**\nWe couldn't afford a spinny animation so this text will have to do.");
               fetch("https://klank-dev.ew.r.appspot.com/", {
                 method: 'POST',
                 mode: 'cors',
@@ -191,7 +195,6 @@ main = runInBrowser_ (pure scene)
                 } else {
                   eval(res.res.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
                   info.setValue("> Successful compilation!\n"+terminalWelcome);
-                  globalAudioHack = res;
                 }
               }, function(e) {
                 console.error(e);
