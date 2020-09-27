@@ -6,6 +6,7 @@ import Ace.EditSession as EditSession
 import Ace.Editor as Editor
 import App.AceComponent as AceComponent
 import App.Cli (CLI(..), cli)
+import App.FirebaseLoginComponent (User, onAuthStateChanged)
 import App.FirebaseLoginComponent as FirebaseLoginComponent
 import App.InitialPS (helpMsg, initialPS, welcomeMsg)
 import App.XTermComponent (focus, setFontSize, writeText)
@@ -20,6 +21,7 @@ import Halogen (ClassName(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
+import Halogen.Query.EventSource as ES
 import Text.Parsing.Parser (runParser)
 
 _ace = SProxy :: SProxy "ace"
@@ -35,6 +37,7 @@ data MainDisplay
 type State
   = { editorText :: String
     , mainDisplay :: MainDisplay
+    , user :: Maybe User
     }
 
 data WhichAce
@@ -70,7 +73,9 @@ type ChildSlots
     )
 
 data Action
-  = HandleAceUpdate AceComponent.Output
+  = Initialize
+  | UpdateUser (Maybe User)
+  | HandleAceUpdate AceComponent.Output
   | HandleTerminalUpdate XTermComponent.Output
 
 component :: forall q i o m. MonadAff m => H.Component HH.HTML q i o m
@@ -80,9 +85,15 @@ component =
         \_ ->
           { editorText: initialPS
           , mainDisplay: EditorDisplay
+          , user: Nothing
           }
     , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
+    , eval:
+        H.mkEval
+          $ H.defaultEval
+              { handleAction = handleAction
+              , initialize = Just Initialize
+              }
     }
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
@@ -136,7 +147,12 @@ render { editorText, mainDisplay } =
 
 handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
-  -- Increment -> H.modify_ \st -> st { count = st.count + 1 }
+  Initialize ->
+    void $ H.subscribe
+      $ ES.effectEventSource \emitter -> do
+          onAuthStateChanged (ES.emit emitter <<< UpdateUser)
+          pure mempty
+  UpdateUser user -> H.modify_ (_ { user = user })
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
 

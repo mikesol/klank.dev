@@ -15,7 +15,7 @@
   "scripts": {
     "build": "spago build",
     "serve": "parcel dev/index.html --open",
-    "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && parcel build prod/index.html"
+    "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && NODE_ENV=production parcel build prod/index.html"
   },
   "dependencies": {
     "firebase": "^7.21.1",

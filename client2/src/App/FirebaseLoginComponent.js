@@ -19,10 +19,38 @@ var ui = new firebaseui.auth.AuthUI(firebase.auth());
 exports.firebaseUI = function () {
   return ui;
 };
+exports.onAuthStateChangedImpl = function (j) {
+  return function (n) {
+    return function (uf) {
+      return function () {
+        console.log("Setting auth state change");
+        firebase.auth().onAuthStateChanged(function (user) {
+          if (user) {
+            uf(
+              j({
+                displayName: user.displayName,
+                uid: user.uid,
+              })
+            );
+          } else {
+            uf(n);
+          }
+        });
+      };
+    };
+  };
+};
 exports.attachFirebaseUIToElement = function (e) {
   return function (ui) {
     return function () {
       ui.start(e, {
+        callbacks: {
+          signInSuccessWithAuthResult: function (authResult, redirectUrl) {
+            //console.log(authResult);
+            return true;
+          },
+        },
+        signInSuccessUrl: process.env.REDIRECT_URI,
         signInOptions: [
           firebase.auth.EmailAuthProvider.PROVIDER_ID,
           firebase.auth.GithubAuthProvider.PROVIDER_ID,

@@ -10,8 +10,6 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Web.HTML (HTMLElement)
 
-foreign import data Firebase :: Type
-
 foreign import data FirebaseUI :: Type
 
 type Input
@@ -60,6 +58,16 @@ render =
 foreign import firebaseUI :: Effect FirebaseUI
 
 foreign import attachFirebaseUIToElement :: HTMLElement -> FirebaseUI -> Effect Unit
+
+foreign import onAuthStateChangedImpl :: forall a. (User -> Maybe User) -> Maybe User -> (Maybe User -> Effect a) -> Effect Unit
+
+type User
+  = { displayName :: String
+    , uid :: String
+    }
+
+onAuthStateChanged :: forall a. (Maybe User -> Effect a) -> Effect Unit
+onAuthStateChanged = onAuthStateChangedImpl Just Nothing
 
 handleAction :: forall m. MonadAff m => Action -> H.HalogenM State Action () Output m Unit
 handleAction = case _ of
