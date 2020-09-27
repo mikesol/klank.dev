@@ -1,6 +1,5 @@
 exports.chalk = function (c) {
   return function (s) {
-    console.log("entering");
     if (
       c.color.constructor.name === "Nothing" &&
       c.bg.constructor.name === "Nothing" &&
@@ -87,7 +86,6 @@ exports.chalk = function (c) {
       }
     }
     if (c.bold) {
-      console.log("setting to bold");
       $$ = $$["bold"];
     }
     if (c.dim) {
