@@ -19,6 +19,7 @@ data CLI
   = Help
   | Login
   | SignUp
+  | Home
   | Load String
   | Rename String
   | Dup String
@@ -26,12 +27,13 @@ data CLI
 
 cli ∷ ∀ s. StringLike s ⇒ Parser s CLI
 cli =
-  try help
-    <|> try login
+  try login
     <|> try signup
+    <|> try home
     <|> try load
     <|> try rename
     <|> try dup
+    <|> try help
     <|> upload
 
 help ∷ ∀ s. StringLike s ⇒ Parser s CLI
@@ -42,6 +44,9 @@ login = string "login" *> pure Login
 
 signup ∷ ∀ s. StringLike s ⇒ Parser s CLI
 signup = string "signup" *> pure Login
+
+home ∷ ∀ s. StringLike s ⇒ Parser s CLI
+home = string "home" *> pure Home
 
 --------------
 -- chars

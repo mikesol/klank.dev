@@ -4,6 +4,8 @@ import Prelude
 import App.Chalk (CColor(..), chalk, defaultChalk)
 import Data.Maybe (Maybe(..))
 
+helpMsg = ("> Here are some commands to make you 💪\r\n> help         | This help message\r\n> login        | Log into your klank.dev account\r\n> signup       | Sign up for file uploads, collaborative sessions etc\r\n> upload [url] | Upload an audio file at [url] (must be logged in)\r\n> load [id]    | Load a session with id [id] (must be logged in)\r\n> rename [id-from] [id-to] |\r\n  Rename a session with id [id-from] to [id-to] (must be logged in)\r\n> dup [id-new] | Duplicate this session to [id-new] (must be logged in)\r\n> home         | Back to the main screen") :: String
+
 welcomeMsg =
   ( "Welcome to "
       <> ( chalk
@@ -15,7 +17,7 @@ welcomeMsg =
             )
             "klank.dev"
         )
-      <> "!\r\n🔊  🎧  in the browser using PureScript.\r\n- Ctrl-K (Win/Linux) or Command-K (Mac) to start/stop the current audio scene\r\n- Ctrl-J (Win/Linux) or Command-J (Mac) to recompile when you make changes\r\n- Docs and issues on https://github.com/mikesol/purescript-audio-behaviors\r\n- Type h then ENTER for more commands\r\n$ "
+      <> "!\r\n🔊  🎧  in the browser using PureScript.\r\n- Ctrl-K (Win/Linux) or Command-K (Mac) to start/stop the current audio scene\r\n- Ctrl-J (Win/Linux) or Command-J (Mac) to recompile when you make changes\r\n- Discussion and issues on https://discourse.klank.dev\r\n- Type h then ENTER for more commands\r\n$ "
   ) ::
     String
 

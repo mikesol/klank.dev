@@ -157,5 +157,4 @@ handleQuery = case _ of
       Nothing -> pure unit
       Just xterm -> do
         void $ H.liftEffect $ writeText text xterm
-    H.raise $ TextChanged text
     pure (Just next)

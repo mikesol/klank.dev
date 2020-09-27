@@ -18,6 +18,8 @@
     "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && parcel build prod/index.html"
   },
   "dependencies": {
+    "firebase": "^7.21.1",
+    "firebaseui": "^4.6.1",
     "xterm": "^4.9.0",
     "xterm-addon-web-links": "^0.4.0"
   }

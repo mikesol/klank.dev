@@ -8,6 +8,7 @@ exports.newTerminal = function (theme) {
     var term = new Terminal({
       cursorBlink: true,
       theme,
+      rows: 10,
     });
     term.loadAddon(new WebLinksAddon());
     return term;
