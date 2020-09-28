@@ -5,9 +5,8 @@ import Ace (Position(..))
 import Ace.EditSession as EditSession
 import Ace.Editor as Editor
 import App.AceComponent as AceComponent
-import App.Cli (CLI(..), cli)
-import App.FirebaseLoginComponent (User, onAuthStateChanged)
-import App.FirebaseLoginComponent as FirebaseLoginComponent
+import App.CanvasComponent as CanvasComponent
+import App.CLI as CLI
 import App.InitialPS (helpMsg, initialPS, welcomeMsg)
 import App.XTermComponent (focus, setFontSize, writeText)
 import App.XTermComponent as XTermComponent
@@ -21,23 +20,22 @@ import Halogen (ClassName(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
-import Halogen.Query.EventSource as ES
 import Text.Parsing.Parser (runParser)
 
 _ace = SProxy :: SProxy "ace"
 
 _xterm = SProxy :: SProxy "xterm"
 
-_login = SProxy :: SProxy "login"
+_canvas = SProxy :: SProxy "canvas"
 
 data MainDisplay
   = EditorDisplay
-  | LoginDisplay
+  | CanvasDisplay
+  | SplitDisplay
 
 type State
   = { editorText :: String
     , mainDisplay :: MainDisplay
-    , user :: Maybe User
     }
 
 data WhichAce
@@ -66,15 +64,27 @@ instance showWhichTerm :: Show WhichTerm where
 instance ordWhichTerm :: Ord WhichTerm where
   compare a b = compare (show a) (show b)
 
+data WhichCanvas
+  = Canvas
+
+derive instance genericWhichCanvas :: Generic WhichCanvas _
+
+derive instance eqWhichCanvas :: Eq WhichCanvas
+
+instance showWhichCanvas :: Show WhichCanvas where
+  show = genericShow
+
+instance ordWhichCanvas :: Ord WhichCanvas where
+  compare a b = compare (show a) (show b)
+
 type ChildSlots
   = ( ace :: AceComponent.Slot WhichAce
     , xterm :: XTermComponent.Slot WhichTerm
-    , login :: FirebaseLoginComponent.Slot Unit
+    , canvas :: CanvasComponent.Slot WhichCanvas
     )
 
 data Action
   = Initialize
-  | UpdateUser (Maybe User)
   | HandleAceUpdate AceComponent.Output
   | HandleTerminalUpdate XTermComponent.Output
 
@@ -85,7 +95,6 @@ component =
         \_ ->
           { editorText: initialPS
           , mainDisplay: EditorDisplay
-          , user: Nothing
           }
     , render
     , eval:
@@ -96,40 +105,45 @@ component =
               }
     }
 
+editorDisplay :: ∀ m. MonadAff m ⇒ String → HH.HTML (H.ComponentSlot HH.HTML ChildSlots m Action) Action
+editorDisplay editorText =
+  HH.slot _ace Editor AceComponent.component
+    { editorStyling:
+        \e -> do
+          Editor.setTheme "ace/theme/monokai" e
+          Editor.setShowPrintMargin false e
+          session <- Editor.getSession e
+          EditSession.setMode "ace/mode/haskell" session
+          Editor.setFontSize "20px" e
+          void $ Editor.setValue editorText Nothing e
+          Editor.moveCursorToPosition
+            ( Position
+                { row: 0
+                , column: 0
+                }
+            )
+            e
+    }
+    (Just <<< HandleAceUpdate)
+
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
 render { editorText, mainDisplay } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
         [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
         [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
-            EditorDisplay ->
-              [ HH.slot _ace Editor AceComponent.component
-                  { editorStyling:
-                      \e -> do
-                        Editor.setTheme "ace/theme/monokai" e
-                        Editor.setShowPrintMargin false e
-                        session <- Editor.getSession e
-                        EditSession.setMode "ace/mode/haskell" session
-                        Editor.setFontSize "20px" e
-                        void $ Editor.setValue editorText Nothing e
-                        Editor.moveCursorToPosition
-                          ( Position
-                              { row: 0
-                              , column: 0
-                              }
-                          )
-                          e
-                  }
-                  (Just <<< HandleAceUpdate)
+            EditorDisplay -> [ editorDisplay editorText ]
+            CanvasDisplay ->
+              [ HH.slot _canvas Canvas CanvasComponent.component
+                  {}
+                  absurd
               ]
-            LoginDisplay ->
-              [ HH.div
-                  [ HP.classes $ map ClassName [ "bg-gray-400", "h-full", "w-full", "flex", "flex-col" ] ]
-                  [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
-                  , HH.slot _login unit FirebaseLoginComponent.component
+            SplitDisplay ->
+              [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
+                  [ editorDisplay editorText
+                  , HH.slot _canvas Canvas CanvasComponent.component
                       {}
                       absurd
-                  , HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
                   ]
               ]
         , HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
@@ -147,12 +161,7 @@ render { editorText, mainDisplay } =
 
 handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
-  Initialize ->
-    void $ H.subscribe
-      $ ES.effectEventSource \emitter -> do
-          onAuthStateChanged (ES.emit emitter <<< UpdateUser)
-          pure mempty
-  UpdateUser user -> H.modify_ (_ { user = user })
+  Initialize -> pure mempty -- no longer used, use if need init
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
 
@@ -164,18 +173,20 @@ handleTerminalOutput :: forall o m. MonadAff m => XTermComponent.Output -> H.Hal
 handleTerminalOutput = case _ of
   XTermComponent.TextChanged tt -> do
     let
-      parserRes = runParser tt cli
+      parserRes = runParser tt CLI.cli
     case parserRes of
       Left _ -> void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, I didn't understand \"" <> tt <> "\"\r\nPlease type h and ENTER to list commands\r\n$ "))
-      Right Help -> void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ ("\r\n" <> helpMsg <> "\r\n$ ")))
-      Right Home -> do
+      Right CLI.Help -> void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ ("\r\n" <> helpMsg <> "\r\n$ ")))
+      Right CLI.Editor -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = EditorDisplay })
-      Right Login -> do
+      Right CLI.EditorCanvas -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
-        H.modify_ (_ { mainDisplay = LoginDisplay })
-      Right SignUp -> do
+        H.modify_ (_ { mainDisplay = SplitDisplay })
+      Right CLI.Canvas -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
-        H.modify_ (_ { mainDisplay = LoginDisplay })
-      Right _ -> void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nStub for login\r\n$ "))
+        H.modify_ (_ { mainDisplay = CanvasDisplay })
+      Right CLI.Play -> void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nStub for play\r\n$ "))
+      Right CLI.Stop -> void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nStub for play\r\n$ "))
+      Right CLI.Compile -> void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nStub for play\r\n$ "))
     pure unit

@@ -17,7 +17,7 @@ frontMatter =
           )
           "klank.dev"
       )
-    <> "!\r\n🔊  🎧  in the browser using PureScript." ::
+    <> "!\r\n🎧  📽️  in the browser using PureScript." ::
     String
 
 afterMatter = "\r\n- p to start the current scene\r\n- s to stop the current scene\r\n- k to recompile when you make changes\r\n- Discussion and issues on https://discourse.klank.dev\r\n- Type h then ENTER for more commands\r\n$ " :: String
@@ -30,7 +30,8 @@ welcomeMsg =
 
 initialPS =
   """module Klank.Dev where
--- New to PureScript? Check out https://www.purescript.org/ for learning resources!
+-- New to PureScript?
+-- Check out https://www.purescript.org/ for learning resources!
 import Prelude
 import Data.List ((:), List(..))
 import Data.NonEmpty ((:|))

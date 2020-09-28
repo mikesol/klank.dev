@@ -2,6 +2,7 @@
 , dependencies =
   [ "ace"
   , "console"
+  , "drawing"
   , "effect"
   , "generics-rep"
   , "halogen"
