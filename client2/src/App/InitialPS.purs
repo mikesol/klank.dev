@@ -4,7 +4,7 @@ import Prelude
 import App.Chalk (CColor(..), chalk, defaultChalk)
 import Data.Maybe (Maybe(..))
 
-helpMsg = ("> Here are some commands to make you 💪\r\n> help         | This help message\r\n> login        | Log into your klank.dev account\r\n> signup       | Sign up for file uploads, collaborative sessions etc\r\n> upload [url] | Upload an audio file at [url] (must be logged in)\r\n> load [id]    | Load a session with id [id] (must be logged in)\r\n> rename [id-from] [id-to] |\r\n  Rename a session with id [id-from] to [id-to] (must be logged in)\r\n> dup [id-new] | Duplicate this session to [id-new] (must be logged in)\r\n> home         | Back to the main screen") :: String
+helpMsg = ("> help (h)    | This help message\r\n> play (p)    | Play the current scene\r\n> stop (s)    | Stop the current scene\r\n> compile (k) | Compile the current scene\r\n> edit (e)    | Show the editor\r\n> split (ec)  | Show the editor and canvas\r\n> canvas (c)  | Show only the canvas") :: String
 
 frontMatter =
   "Welcome to "
@@ -20,18 +20,10 @@ frontMatter =
     <> "!\r\n🔊  🎧  in the browser using PureScript." ::
     String
 
-afterMatter = "\r\n- Ctrl-K (Win/Linux) or Command-K (Mac) to start/stop the current audio scene\r\n- Ctrl-J (Win/Linux) or Command-J (Mac) to recompile when you make changes\r\n- Discussion and issues on https://discourse.klank.dev\r\n- Type h then ENTER for more commands\r\n$ " :: String
+afterMatter = "\r\n- p to start the current scene\r\n- s to stop the current scene\r\n- k to recompile when you make changes\r\n- Discussion and issues on https://discourse.klank.dev\r\n- Type h then ENTER for more commands\r\n$ " :: String
 
 welcomeMsg =
   ( frontMatter
-      <> afterMatter
-  ) ::
-    String
-
-welcomeMsgLoggedIn =
-  ( frontMatter
-      <> "\r\nYou're logged in ✨👋"
-      <> "\r\nYou can upload audio files, save sessions and more 🎷🎵😍"
       <> afterMatter
   ) ::
     String

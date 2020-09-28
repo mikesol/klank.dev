@@ -18,29 +18,32 @@ whiteSpace' = do
 data CLI
   = Help
   | Login
+  | Logout
   | SignUp
   | Home
-  | Load String
-  | Rename String
-  | Dup String
-  | Upload String
+  | Ls
+  | Rename String String
+  | Store String String
 
 cli ∷ ∀ s. StringLike s ⇒ Parser s CLI
 cli =
   try login
+    <|> try logout
     <|> try signup
     <|> try home
-    <|> try load
     <|> try rename
-    <|> try dup
     <|> try help
-    <|> upload
+    <|> try list
+    <|> store
 
 help ∷ ∀ s. StringLike s ⇒ Parser s CLI
 help = (try $ string "help" <|> string "h") *> pure Help
 
 login ∷ ∀ s. StringLike s ⇒ Parser s CLI
 login = string "login" *> pure Login
+
+logout ∷ ∀ s. StringLike s ⇒ Parser s CLI
+logout = string "logout" *> pure Logout
 
 signup ∷ ∀ s. StringLike s ⇒ Parser s CLI
 signup = string "signup" *> pure Login
@@ -71,14 +74,14 @@ name =
           <*> (many (oneOf $ upper <> lower <> digits <> [ '_' ]))
       )
 
-load ∷ ∀ s. StringLike s ⇒ Parser s CLI
-load = string "load" *> whiteSpace' *> (Load <$> name)
+list ∷ ∀ s. StringLike s ⇒ Parser s CLI
+list = string "list" *> whiteSpace' *> pure Ls
 
 rename ∷ ∀ s. StringLike s ⇒ Parser s CLI
-rename = string "rename" *> whiteSpace' *> (Rename <$> name)
+rename = string "rename" *> whiteSpace' *> (Rename <$> name <*> (whiteSpace' *> name))
 
-dup ∷ ∀ s. StringLike s ⇒ Parser s CLI
-dup = string "dup" *> whiteSpace' *> (Dup <$> name)
-
-upload ∷ ∀ s. StringLike s ⇒ Parser s CLI
-upload = (try $ string "upload" <|> string "u") *> whiteSpace' *> (Load <$> name)
+store ∷ ∀ s. StringLike s ⇒ Parser s CLI
+store =
+  (try $ string "store" <|> string "u")
+    *> whiteSpace'
+    *> (Store <$> name <*> (whiteSpace' *> name))
