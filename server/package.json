@@ -15,6 +15,7 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
+    "esbuild": "^0.7.8",
     "express": "^4.17.1",
     "helmet": "^4.1.1",
     "purescript": "^0.13.8",

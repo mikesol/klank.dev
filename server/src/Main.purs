@@ -1,7 +1,6 @@
 module Main where
 
 import Prelude
-
 import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
@@ -68,6 +67,12 @@ compiler { body } =
           try
             ( liftEffect
                 $ unlink
+                    ("./deps/" <> uuid <> "/index_.js")
+            )
+        _ <-
+          try
+            ( liftEffect
+                $ unlink
                     ("./deps/" <> uuid <> "/index.js")
             )
         _ <-
@@ -108,6 +113,12 @@ compiler { body } =
           liftEffect
             $ writeTextFile
                 UTF8
+                ("deps/" <> uuid <> "/index_.js")
+                ("window.klank = require(\"../output/" <> renamed.moduleName <> "/\")")
+        _ <-
+          liftEffect
+            $ writeTextFile
+                UTF8
                 ("deps/" <> uuid <> "/Main.purs")
                 renamed.code
         whatHappened <-
@@ -115,13 +126,23 @@ compiler { body } =
             { args:
                 [ "-x"
                 , uuid <> ".dhall"
-                , "bundle-module"
-                , "--main"
-                , renamed.moduleName
-                , "--to"
-                , uuid <> "/index.js"
+                , "build"
                 ]
             , cmd: if platform == Just Win32 then "spago.cmd" else "spago"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+              { cwd = Just "deps"
+              }
+        whatHappened2 <-
+          spawn
+            { args:
+                [ uuid <> "/index_.js"
+                , "--bundle"
+                , "--minify"
+                , "--outfile=" <> uuid <> "/index.js"
+                ]
+            , cmd: "../node_modules/.bin/esbuild"
             , stdin: Nothing
             }
             defaultSpawnOptions
@@ -150,6 +171,7 @@ compiler { body } =
     )
 
 compile :: { body :: Code } -> (String -> Effect Unit) -> Effect Unit
-compile { body } cb = launchAff_ do
-  res <- compiler {body}
-  liftEffect $ cb (writeJSON res)
+compile { body } cb =
+  launchAff_ do
+    res <- compiler { body }
+    liftEffect $ cb (writeJSON res)
