@@ -85,27 +85,6 @@ main = runInBrowser_ (pure scene)
   </div>
     <script>
       var forest = new Audio("forest.mp3");
-
-      ////////////////////////////// workers
-      var n = 8;
-      var workers = [];
-      for (var i = 0; i < n; i++) {
-        var w = new Worker("glpk-worker.js");
-        workers.push(w);
-        w.queue = [];
-        w.onmessage = function (e) {
-          if (e.data.initialized) {
-            return;
-          }
-          var s = this.queue.shift();
-          var o = e.data;
-          return o.result.status !== 5 ? s[1]("Error") : s[0](o.result.vars);
-        };
-        w.onerror = function (err) {
-          var s = this.queue.shift();
-          s[1](err);
-        };
-      }
       
       var offCb = null;
       // this ctx won't be used, but it may load the audio faster
@@ -147,7 +126,7 @@ main = runInBrowser_ (pure scene)
         }).then(function(r){ return r.json();}).then(function(res){
           if (res.error) {
             info.setValue("> There was an error compiling your code. Please fix and recompile with Ctrl-J or Command-J.\nHere is the error report: \n"+res.error);
-          } else {
+          } else {console.log(res.res)
             eval(res.res.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\""+res.moduleName+"\"];");
             info.setValue("> Successful compilation!\n"+terminalWelcome);
           }
@@ -196,11 +175,11 @@ main = runInBrowser_ (pure scene)
                   var now = new Date().getTime();
                   var ctr = 0;
                   // null for the microphone
-                  offCb = globalAudioHack.main()()(15)(10)(audioCtx)(
+                  offCb = globalAudioHack.main()()(20)(15)(audioCtx)(
                     mic
                   )({
                     forest
-                  })(workers)(function (timeToSet) {
+                  })(function (timeToSet) {
                     return function (instructions) {
                       return function (ctx) {
                         return function (stream) {
@@ -234,7 +213,7 @@ main = runInBrowser_ (pure scene)
           readOnly: true // false if this command should not apply in readOnly mode
         });
       }
-      eval(initialPS.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\"A7e39a3464be54378946438f55fb8048c\"];");
+      eval(initialPS.split("\n").slice(0,-2).join("\n")+"\nglobalAudioHack = PS[\"A68622cc22aff43d2b5f3a1ff40f5ceee\"];");
       editor.focus();
     </script>
   </body>

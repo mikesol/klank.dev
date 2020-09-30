@@ -1,9 +1,6 @@
 [submodule "client/ace-builds"]
 	path = client/ace-builds
 	url = https://github.com/ajaxorg/ace-builds/
-[submodule "client/glpk.js"]
-	path = client/glpk.js
-	url = https://github.com/jvail/glpk.js
 [submodule "client2/ace-builds"]
 	path = client2/ace-builds
 	url = https://github.com/ajaxorg/ace-builds
