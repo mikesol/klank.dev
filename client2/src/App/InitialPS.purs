@@ -39,7 +39,7 @@ import Data.List ((:), List(..))
 import Data.NonEmpty ((:|))
 import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker, CanvasInfo)
+import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker)
 import Math (pi, sin)
 
 scene :: Number -> Behavior (AudioUnit D1)
@@ -54,5 +54,22 @@ scene time = let
               : Nil
           )
 
-main = runInBrowser scene""" ::
+main = runInBrowser scene
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+""" ::
     String
