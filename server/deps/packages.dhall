@@ -131,6 +131,8 @@ let additions = {
             , "console"
             , "debug"
             , "effect"
+            , "drawing"
+            , "canvas"
             , "foreign-object"
             , "heterogeneous"
             , "parseint"

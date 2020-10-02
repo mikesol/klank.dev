@@ -1,0 +1,27 @@
+{
+  "private": true,
+  "devDependencies": {
+    "autoprefixer": "9.8.6",
+    "parcel": "^2.0.0-beta.1",
+    "postcss": "^8.0.9",
+    "postcss-cli": "^8.0.0",
+    "postcss-modules": "^3.2.2",
+    "purescript": "^0.13.8",
+    "purty": "^6.2.0",
+    "spago": "^0.15.3",
+    "tailwind": "^4.0.0",
+    "tailwindcss": "^1.8.10"
+  },
+  "scripts": {
+    "postinstall": "spago install && spago build",
+    "build": "spago build",
+    "serve": "parcel dev/index.html dev/ps-aud-mul.js --open",
+    "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/first-klank.js prod/ && cp dev/ps-aud-mul.js prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && NODE_ENV=production parcel build prod/index.html"
+  },
+  "dependencies": {
+    "firebase": "^7.21.1",
+    "firebaseui": "^4.6.1",
+    "xterm": "^4.9.0",
+    "xterm-addon-web-links": "^0.4.0"
+  }
+}

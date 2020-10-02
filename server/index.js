@@ -2,7 +2,7 @@ var express = require("express");
 var bodyParser = require("body-parser");
 var ps = require("./output/Main/");
 var helmet = require("helmet");
-var cors = require('cors');
+var cors = require("cors");
 var app = express();
 
 app.use(cors());
