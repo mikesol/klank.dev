@@ -21,13 +21,13 @@ import Data.Either (Either(..), either)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..), maybe)
-import Data.String (Pattern(..), Replacement(..), replace)
+import Data.String (Pattern(..), Replacement(..), replace, replaceAll)
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
--- import Effect.Class.Console (log)
+import Effect.Class.Console (log)
 import FRP.Behavior.Audio (AudioContext, AudioInfo, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, VisualInfo, makeAudioContext)
 import Foreign.Object (Object)
 import Foreign.Object as O
@@ -334,7 +334,7 @@ handleTerminalOutput = case _ of
                                       H.query
                                         _xterm
                                         Terminal
-                                        $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, your code did not compile. Here is the error message:\r\n" <> either (const "Unidentified error") (replace (Pattern "\n") (Replacement "\r\n")) error_ <> "\r\n$ ")
+                                        $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, your code did not compile. Here is the error message:\r\n" <> either (const "Unidentified error") (replaceAll (Pattern "\n") (Replacement "\r\n")) error_ <> "\r\n$ ")
                                     pure unit
                                 )
                             )
