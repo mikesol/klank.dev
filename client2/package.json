@@ -15,8 +15,8 @@
   "scripts": {
     "postinstall": "spago install && spago build",
     "build": "spago build",
-    "serve": "parcel dev/index.html dev/ps-aud-mul.js --open",
-    "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/first-klank.js prod/ && cp dev/ps-aud-mul.js prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && NODE_ENV=production parcel build prod/index.html"
+    "serve": "parcel dev/index.html --open",
+    "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/first-klank.js prod/ && cp dev/ps-aud-mul.js prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && NODE_ENV=production parcel build prod/index.html && cp dev/ps-aud-mul.js dist/"
   },
   "dependencies": {
     "firebase": "^7.21.1",
