@@ -305,7 +305,7 @@ handleTerminalOutput = case _ of
                 H.query
                   _xterm
                   Terminal
-                  $ H.tell (XTermComponent.ChangeText $ "\r\nCompiling. Please be patient.\r\nThis should take 8-12 seconds depending on your internet connection speed.")
+                  $ H.tell (XTermComponent.ChangeText $ "\r\nCompiling. Please be patient.\r\nThis should take 2-8 seconds depending on your internet connection speed.")
               response <-
                 H.liftAff
                   $ AX.post AXRF.json url (Just (RequestBody.json $ encodeJson { code }))
