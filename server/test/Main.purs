@@ -1,7 +1,6 @@
 module Test.Main where
 
 import Prelude
-
 import Data.JSDate (getTime, now)
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
@@ -10,7 +9,7 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Main (compiler)
 import Test.Spec (describe, it)
-import Test.Spec.Assertions (shouldEqual, shouldNotEqual)
+import Test.Spec.Assertions (shouldNotEqual)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (defaultConfig, runSpec')
 
@@ -29,7 +28,6 @@ main =
                 }
             now__ <- liftEffect $ map getTime now
             log $ ("Start -- " <> show (now__ - now_))
-            
             res.res `shouldNotEqual` Nothing
           it "Fails incorrect code" do
             res <-

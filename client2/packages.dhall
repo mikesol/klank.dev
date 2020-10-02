@@ -117,11 +117,32 @@ let additions =
 -------------------------------
 -}
 
+
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20200724/packages.dhall sha256:bb941d30820a49345a0e88937094d2b9983d939c9fd3a46969b85ce44953d7d9
+      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20200911-2/packages.dhall sha256:872c06349ed9c8210be43982dc6466c2ca7c5c441129826bcb9bf3672938f16e
 
 let overrides = {=}
 
-let additions = {=}
+let additions = {
+    audio-behaviors =
+      { dependencies =
+          [ "aff-promise"
+            , "behaviors"
+            , "console"
+            , "debug"
+            , "effect"
+            , "foreign-object"
+            , "heterogeneous"
+            , "parseint"
+            , "psci-support"
+            , "sized-vectors"
+            , "typelevel-prelude"
+          ]
+      , repo =
+          "https://github.com/mikesol/purescript-audio-behaviors.git"
+      , version =
+          "master"
+      }
+}
 
 in  upstream // overrides // additions

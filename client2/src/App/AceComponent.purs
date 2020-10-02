@@ -24,6 +24,7 @@ type Slot
 
 data Query a
   = ChangeText String a
+  | GetText (Maybe String -> a)
 
 data Output
   = TextChanged String
@@ -99,6 +100,13 @@ handleAction = case _ of
 
 handleQuery :: forall m a. MonadAff m => Query a -> H.HalogenM State Action () Output m (Maybe a)
 handleQuery = case _ of
+  GetText next -> do
+    maybeEditor <- H.gets _.editor
+    case maybeEditor of
+      Nothing -> pure (Just (next Nothing))
+      Just editor -> do
+        current <- H.liftEffect $ Editor.getValue editor
+        pure (Just (next (Just current)))
   ChangeText text next -> do
     maybeEditor <- H.gets _.editor
     case maybeEditor of

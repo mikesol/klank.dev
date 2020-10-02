@@ -1,6 +1,10 @@
 { name = "halogen-project"
 , dependencies =
   [ "ace"
+  , "aff-promise"
+  , "affjax"
+  , "argonaut-codecs"
+  , "audio-behaviors"
   , "console"
   , "drawing"
   , "effect"
