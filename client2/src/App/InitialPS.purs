@@ -54,22 +54,5 @@ scene time = let
               : Nil
           )
 
-main = runInBrowser scene
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-""" ::
+main = runInBrowser scene""" ::
     String

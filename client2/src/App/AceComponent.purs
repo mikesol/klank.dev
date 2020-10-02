@@ -71,6 +71,8 @@ render =
         ]
         []
 
+foreign import windowHack :: Effect Unit
+
 handleAction :: forall m. MonadAff m => Action -> H.HalogenM State Action () Output m Unit
 handleAction = case _ of
   Initialize -> do
@@ -93,6 +95,7 @@ handleAction = case _ of
     -- real world component might need.
     H.modify_ (_ { editor = Nothing })
   HandleChange -> do
+    H.liftEffect windowHack
     H.gets _.editor
       >>= traverse_ \editor -> do
           text <- H.liftEffect (Editor.getValue editor)
