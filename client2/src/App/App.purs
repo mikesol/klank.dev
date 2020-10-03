@@ -344,7 +344,7 @@ handleTerminalOutput = case _ of
                                   H.query
                                     _xterm
                                     Terminal
-                                    $ H.tell (XTermComponent.ChangeText $ "\r\nSuccess! You're code is compiled.\r\np to play, s to stop.\r\n$ ")
+                                    $ H.tell (XTermComponent.ChangeText $ "\r\nSuccess! Your code is compiled.\r\np to play, s to stop.\r\n$ ")
                                 pure unit
                             )
                             res_
