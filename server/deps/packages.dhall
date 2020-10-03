@@ -144,7 +144,20 @@ let additions = {
           "https://github.com/mikesol/purescript-audio-behaviors.git"
       , version =
           "master"
+      },
+          typelevel-klank-dev =
+      { dependencies =
+          [ "audio-behaviors"
+            , "console"
+            , "effect"
+            , "psci-support"
+          ]
+      , repo =
+          "https://github.com/mikesol/type.klank.dev.git"
+      , version =
+          "main"
       }
+
 }
 
 in  upstream // overrides // additions
