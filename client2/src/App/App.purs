@@ -21,13 +21,14 @@ import Data.Either (Either(..), either)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..), maybe)
-import Data.String (Pattern(..), Replacement(..), replace, replaceAll)
+import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
-import Effect.Class.Console (log)
+-- import Effect.Class.Console (log)
+import Effect.Exception (Error)
 import FRP.Behavior.Audio (AudioContext, AudioInfo, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, VisualInfo, makeAudioContext)
 import Foreign.Object (Object)
 import Foreign.Object as O
@@ -48,14 +49,13 @@ foreign import canvasOrBust :: Effect CanvasElement
 
 foreign import getKlank ::
   forall accumulator.
-  (forall anything. anything -> Aff anything) ->
   Effect
     { enableMicrophone :: Boolean
-    , accumulator :: Aff accumulator
-    , tracks :: Aff (Object BrowserAudioTrack)
-    , buffers :: AudioContext -> Aff (Object BrowserAudioBuffer)
-    , floatArrays :: Aff (Object BrowserFloatArray)
-    , periodicWaves :: AudioContext -> Aff (Object BrowserPeriodicWave)
+    , accumulator :: (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , tracks :: (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , buffers :: AudioContext -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , floatArrays :: (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , periodicWaves :: AudioContext -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
     , main ::
         accumulator ->
         Int ->
@@ -133,6 +133,12 @@ data Action
   = Initialize
   | HandleAceUpdate AceComponent.Output
   | HandleTerminalUpdate XTermComponent.Output
+
+affable :: forall a. ((a -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit) -> Aff a
+affable f =
+  makeAff \cb -> do
+    _ <- f (cb <<< Right) (cb <<< Left)
+    pure mempty
 
 component :: forall q i o m. MonadAff m => H.Component HH.HTML q i o m
 component =
@@ -255,7 +261,7 @@ handleTerminalOutput = case _ of
         H.modify_ (_ { mainDisplay = CanvasDisplay })
       Right CLI.Play -> do
         stopper
-        klank <- H.liftEffect $ getKlank pure
+        klank <- H.liftEffect getKlank
         ctx <- H.liftEffect makeAudioContext
         H.modify_ (_ { audioCtx = Just ctx })
         H.liftAff (toAffE $ loadCustomAudioNodes ctx)
@@ -267,11 +273,11 @@ handleTerminalOutput = case _ of
             )
           else
             pure O.empty
-        accumulator <- H.liftAff klank.accumulator
-        tracks <- H.liftAff klank.tracks
-        buffers <- H.liftAff $ klank.buffers ctx
-        floatArrays <- H.liftAff klank.floatArrays
-        periodicWaves <- H.liftAff $ klank.periodicWaves ctx
+        accumulator <- H.liftAff (affable klank.accumulator)
+        tracks <- H.liftAff (affable klank.tracks)
+        buffers <- H.liftAff (affable $ klank.buffers ctx)
+        floatArrays <- H.liftAff (affable klank.floatArrays)
+        periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx)
         turnMeOff <-
           H.liftEffect
             ( klank.main
