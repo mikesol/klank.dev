@@ -20,8 +20,17 @@ exports.loadCustomAudioNodes = function (audioCtx) {
   };
 };
 var cbHack = function (res) {
-  return function () {
-    return res({});
+  return function (rej) {
+    return function () {
+      return res({});
+    };
+  };
+};
+var cbAHack = function (res) {
+  return function (rej) {
+    return function () {
+      return res([]);
+    };
   };
 };
 exports.getKlank = function () {
@@ -40,13 +49,7 @@ exports.getKlank = function () {
     };
   }
   if (!window.klank.worklets) {
-    window.klank.worklets = function () {
-      return function (res) {
-        return function () {
-          return res([]);
-        };
-      };
-    };
+    window.klank.worklets = cbAHack;
   }
   if (!window.klank.floatArrays) {
     window.klank.floatArrays = cbHack;
