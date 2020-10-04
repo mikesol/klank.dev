@@ -39,6 +39,15 @@ exports.getKlank = function () {
       return cbHack;
     };
   }
+  if (!window.klank.worklets) {
+    window.klank.worklets = function () {
+      return function (res) {
+        return function () {
+          return res([]);
+        };
+      };
+    };
+  }
   if (!window.klank.floatArrays) {
     window.klank.floatArrays = cbHack;
   }

@@ -23,13 +23,13 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.Symbol (SProxy(..))
+import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
--- import Effect.Class.Console (log)
 import Effect.Exception (Error)
-import FRP.Behavior.Audio (AudioContext, AudioInfo, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, VisualInfo, makeAudioContext)
+import FRP.Behavior.Audio (AudioContext, AudioInfo, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, VisualInfo, makeAudioContext, audioWorkletAddModule)
 import Foreign.Object (Object)
 import Foreign.Object as O
 import Graphics.Canvas (CanvasElement)
@@ -52,6 +52,7 @@ foreign import getKlank ::
   Effect
     { enableMicrophone :: Boolean
     , accumulator :: (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , worklets :: (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
     , tracks :: (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
     , buffers :: AudioContext -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
     , floatArrays :: (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
@@ -274,6 +275,8 @@ handleTerminalOutput = case _ of
           else
             pure O.empty
         accumulator <- H.liftAff (affable klank.accumulator)
+        worklets <- H.liftAff (affable klank.worklets)
+        _ <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
         tracks <- H.liftAff (affable klank.tracks)
         buffers <- H.liftAff (affable $ klank.buffers ctx)
         floatArrays <- H.liftAff (affable klank.floatArrays)
