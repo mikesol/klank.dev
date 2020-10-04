@@ -12,7 +12,7 @@ import Data.UUID (genUUID, toString)
 import Effect (Effect)
 import Effect.Aff (Aff, bracket, launchAff_, try)
 import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
+-- import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
@@ -46,7 +46,7 @@ hackishlyRenameModule u cd m = do
   let
     moduleName = "A" <> (replaceAll (Pattern "-") (Replacement "") u)
   pure
-    { code: (replaceAll (Pattern m) (Replacement moduleName) cd)
+    { code: (replaceAll (Pattern ("module " <> m <> " where")) (Replacement ("module " <> moduleName <> " where")) cd)
     , moduleName
     }
 

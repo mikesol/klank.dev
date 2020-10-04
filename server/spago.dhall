@@ -14,6 +14,7 @@ You can edit this file as you like.
   , "psci-support"
   , "simple-json"
   , "sunde"
+  , "typelevel-klank-dev"
   , "uuid"
   ]
 , packages = ./packages.dhall
