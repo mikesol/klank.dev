@@ -276,6 +276,11 @@ handleTerminalOutput = case _ of
             pure O.empty
         accumulator <- H.liftAff (affable klank.accumulator)
         worklets <- H.liftAff (affable klank.worklets)
+        -------------
+        ----- maybe it's just superstition
+        ---- but i think this didn't work unless I explicitly asked for a variable `o`
+        --- instead of _ <-
+        --------- weird...
         o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
         tracks <- H.liftAff (affable klank.tracks)
         buffers <- H.liftAff (affable $ klank.buffers ctx)
