@@ -138,7 +138,7 @@ data Action
 affable :: forall a. ((a -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit) -> Aff a
 affable f =
   makeAff \cb -> do
-    _ <- f (cb <<< Right) (cb <<< Left)
+    f (cb <<< Right) (cb <<< Left)
     pure mempty
 
 component :: forall q i o m. MonadAff m => H.Component HH.HTML q i o m

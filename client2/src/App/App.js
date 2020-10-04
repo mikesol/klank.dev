@@ -21,16 +21,12 @@ exports.loadCustomAudioNodes = function (audioCtx) {
 };
 var cbHack = function (res) {
   return function (rej) {
-    return function () {
-      return res({});
-    };
+    return res({});
   };
 };
 var cbAHack = function (res) {
   return function (rej) {
-    return function () {
-      return res([]);
-    };
+    return res([]);
   };
 };
 exports.getKlank = function () {
