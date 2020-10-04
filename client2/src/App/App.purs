@@ -276,7 +276,7 @@ handleTerminalOutput = case _ of
             pure O.empty
         accumulator <- H.liftAff (affable klank.accumulator)
         worklets <- H.liftAff (affable klank.worklets)
-        _ <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
+        o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
         tracks <- H.liftAff (affable klank.tracks)
         buffers <- H.liftAff (affable $ klank.buffers ctx)
         floatArrays <- H.liftAff (affable klank.floatArrays)
