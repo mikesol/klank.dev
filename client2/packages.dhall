@@ -131,18 +131,46 @@ let additions = {
             , "console"
             , "debug"
             , "effect"
+            , "drawing"
+            , "canvas"
             , "foreign-object"
             , "heterogeneous"
             , "parseint"
             , "psci-support"
+            , "record-extra"
             , "sized-vectors"
             , "typelevel-prelude"
+            , "typelevel-graph"
           ]
       , repo =
           "https://github.com/mikesol/purescript-audio-behaviors.git"
       , version =
           "master"
+      },
+    typelevel-graph =
+      { dependencies =
+          [ 
+             "record-extra"
+            , "typelevel-peano"
+          ]
+      , repo =
+          "https://github.com/mikesol/purescript-typelevel-graph.git"
+      , version =
+          "main"
+      },
+          typelevel-klank-dev =
+      { dependencies =
+          [ "audio-behaviors"
+            , "console"
+            , "effect"
+            , "psci-support"
+          ]
+      , repo =
+          "https://github.com/mikesol/type.klank.dev.git"
+      , version =
+          "main"
       }
+
 }
 
 in  upstream // overrides // additions

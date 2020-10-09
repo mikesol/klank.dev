@@ -137,13 +137,26 @@ let additions = {
             , "heterogeneous"
             , "parseint"
             , "psci-support"
+            , "record-extra"
             , "sized-vectors"
             , "typelevel-prelude"
+            , "typelevel-graph"
           ]
       , repo =
           "https://github.com/mikesol/purescript-audio-behaviors.git"
       , version =
           "master"
+      },
+    typelevel-graph =
+      { dependencies =
+          [ 
+             "record-extra"
+            , "typelevel-peano"
+          ]
+      , repo =
+          "https://github.com/mikesol/purescript-typelevel-graph.git"
+      , version =
+          "main"
       },
           typelevel-klank-dev =
       { dependencies =
