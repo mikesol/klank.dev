@@ -15,6 +15,7 @@ data CLI
   | Play
   | Stop
   | Compile
+  | Link
 
 cli ∷ ∀ s. StringLike s ⇒ Parser s CLI
 cli =
@@ -24,10 +25,14 @@ cli =
     <|> try canvas
     <|> try play
     <|> try stop
+    <|> try link
     <|> compile
 
 help ∷ ∀ s. StringLike s ⇒ Parser s CLI
 help = (try $ string "help" <|> string "h") *> pure Help
+
+link ∷ ∀ s. StringLike s ⇒ Parser s CLI
+link = (try $ string "link" <|> string "l") *> pure Link
 
 editor ∷ ∀ s. StringLike s ⇒ Parser s CLI
 editor = (try $ string "edit" <|> string "e") *> pure Editor

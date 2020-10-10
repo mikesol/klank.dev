@@ -1,7 +1,47 @@
+var querystring = require("querystring-browser");
+
+exports.getB64 = function (nothing) {
+  return function (just) {
+    return function () {
+      var urlParams = new URLSearchParams(window.location.search);
+      var myParam = urlParams.get("b64");
+      return myParam ? just(myParam) : nothing;
+    };
+  };
+};
+exports.getK = function () {
+  var urlParams = new URLSearchParams(window.location.search);
+  var myParam = urlParams.get("k");
+  return myParam === null || myParam === "false" ? false : true;
+};
+
+exports.escape = function (s) {
+  return function () {
+    return querystring.escape(s);
+  };
+};
+exports.copyToClipboard = function (str) {
+  return function () {
+    const el = document.createElement("textarea");
+    el.value = str;
+    el.setAttribute("readonly", "");
+    el.style.position = "absolute";
+    el.style.left = "-9999px";
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
+  };
+};
 exports.serverUrl = function () {
   return process.env.SERVER_URI;
 };
-
+exports.firebaseUrl = function () {
+  return process.env.FIREBASE_URL;
+};
+exports.firebaseToken = function () {
+  return process.env.FIREBASE_TOKEN;
+};
 exports.completelyUnsafeEval = function (s) {
   return function () {
     eval(s);
@@ -42,7 +82,7 @@ exports.getKlank = function () {
       return function (rej) {
         return res([]);
       };
-    };;
+    };
   }
   if (!window.klank.tracks) {
     window.klank.tracks = cbHack;
