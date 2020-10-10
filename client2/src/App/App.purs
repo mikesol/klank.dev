@@ -51,12 +51,12 @@ foreign import getKlank ::
   forall accumulator.
   Effect
     { enableMicrophone :: Boolean
-    , accumulator :: Maybe accumulator -> (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , worklets :: Maybe (Array String) -> (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , tracks :: Maybe (Object BrowserAudioTrack) -> (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , buffers :: AudioContext -> Maybe (Object BrowserAudioBuffer) -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , floatArrays :: Maybe (Object BrowserFloatArray) -> (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , periodicWaves :: AudioContext -> Maybe (Object BrowserPeriodicWave) -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , accumulator ::  (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , worklets ::  (Array String) -> (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , tracks ::  (Object BrowserAudioTrack) -> (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , buffers :: AudioContext ->  (Object BrowserAudioBuffer) -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , floatArrays ::  (Object BrowserFloatArray) -> (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , periodicWaves :: AudioContext ->  (Object BrowserPeriodicWave) -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
     , main ::
         accumulator ->
         Int ->
@@ -83,12 +83,11 @@ type State accumulator
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
-    , accumulator :: Maybe accumulator
-    , worklets :: Maybe (Array String)
-    , tracks :: Maybe (Object BrowserAudioTrack)
-    , buffers :: Maybe (Object BrowserAudioBuffer)
-    , floatArrays :: Maybe (Object BrowserFloatArray)
-    , periodicWaves :: Maybe (Object BrowserPeriodicWave)
+    , worklets ::  Array String
+    , tracks ::  Object BrowserAudioTrack
+    , buffers ::  Object BrowserAudioBuffer
+    , floatArrays ::  Object BrowserFloatArray
+    , periodicWaves ::  Object BrowserPeriodicWave
     }
 
 data WhichAce
@@ -156,12 +155,11 @@ component =
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
-          , accumulator: Nothing
-          , worklets: Nothing
-          , tracks: Nothing
-          , buffers: Nothing
-          , floatArrays: Nothing
-          , periodicWaves: Nothing
+          , worklets: []
+          , tracks: O.empty
+          , buffers: O.empty
+          , floatArrays: O.empty
+          , periodicWaves: O.empty
           }
     , render
     , eval:
@@ -286,8 +284,7 @@ handleTerminalOutput = case _ of
             )
           else
             pure O.empty
-        prevAccumulator <- H.gets _.accumulator
-        accumulator <- H.liftAff (affable $ klank.accumulator prevAccumulator)
+        accumulator <- H.liftAff (affable $ klank.accumulator)
         prevWorklets <- H.gets _.worklets
         worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
         -------------
