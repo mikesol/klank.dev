@@ -287,6 +287,7 @@ handleTerminalOutput = case _ of
         accumulator <- H.liftAff (affable $ klank.accumulator)
         prevWorklets <- H.gets _.worklets
         worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
+        H.modify_ (_ { worklets = worklets })
         -------------
         ----- maybe it's just superstition
         ---- but i think this didn't work unless I explicitly asked for a variable `o`
@@ -295,12 +296,16 @@ handleTerminalOutput = case _ of
         o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
         prevTracks <- H.gets _.tracks
         tracks <- H.liftAff (affable $ klank.tracks prevTracks)
+        H.modify_ (_ { tracks = tracks })
         prevBuffers <- H.gets _.buffers
         buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
+        H.modify_ (_ { buffers = buffers })
         prevFloatArrays <- H.gets _.floatArrays
         floatArrays <- H.liftAff (affable $ klank.floatArrays prevFloatArrays)
+        H.modify_ (_ { floatArrays = floatArrays })
         prevPeriodicWaves <- H.gets _.periodicWaves
         periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx prevPeriodicWaves)
+        H.modify_ (_ { periodicWaves = periodicWaves })
         turnMeOff <-
           H.liftEffect
             ( klank.main
