@@ -78,11 +78,17 @@ data MainDisplay
   | CanvasDisplay
   | SplitDisplay
 
-type State
+type State accumulator
   = { editorText :: String
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
+    , accumulator :: Maybe accumulator
+    , worklets :: Maybe (Array String)
+    , tracks :: Maybe (Object BrowserAudioTrack)
+    , buffers :: Maybe (Object BrowserAudioBuffer)
+    , floatArrays :: Maybe (Object BrowserFloatArray)
+    , periodicWaves :: Maybe (Object BrowserPeriodicWave)
     }
 
 data WhichAce
@@ -150,6 +156,12 @@ component =
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
+          , accumulator: Nothing
+          , worklets: Nothing
+          , tracks: Nothing
+          , buffers: Nothing
+          , floatArrays: Nothing
+          , periodicWaves: Nothing
           }
     , render
     , eval:
@@ -181,7 +193,7 @@ editorDisplay editorText =
     }
     (Just <<< HandleAceUpdate)
 
-render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
+render :: forall a m. MonadAff m => (State a) -> H.ComponentHTML Action ChildSlots m
 render { editorText, mainDisplay } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
@@ -223,14 +235,14 @@ foreign import getMicrophoneImpl :: Effect (Promise BrowserMicrophone)
 getMicrophone :: Aff BrowserMicrophone
 getMicrophone = toAffE getMicrophoneImpl
 
-handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
+handleAction :: forall a o m. MonadAff m => Action → H.HalogenM (State a) Action ChildSlots o m Unit
 handleAction = case _ of
   Initialize -> do
     pure mempty
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
 
-handleAceOuput :: forall o m. MonadAff m => AceComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
+handleAceOuput :: forall a o m. MonadAff m => AceComponent.Output -> H.HalogenM (State a) Action ChildSlots o m Unit
 handleAceOuput = case _ of
   AceComponent.TextChanged editorText -> H.modify_ (_ { editorText = editorText })
 
@@ -243,7 +255,7 @@ stopper = do
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
-handleTerminalOutput :: forall o m. MonadAff m => XTermComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
+handleTerminalOutput :: forall a o m. MonadAff m => XTermComponent.Output -> H.HalogenM (State a) Action ChildSlots o m Unit
 handleTerminalOutput = case _ of
   XTermComponent.TextChanged tt -> do
     let
@@ -274,18 +286,24 @@ handleTerminalOutput = case _ of
             )
           else
             pure O.empty
-        accumulator <- H.liftAff (affable $ klank.accumulator Nothing)
-        worklets <- H.liftAff (affable $ klank.worklets Nothing)
+        prevAccumulator <- H.gets _.accumulator
+        accumulator <- H.liftAff (affable $ klank.accumulator prevAccumulator)
+        prevWorklets <- H.gets _.worklets
+        worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
         -------------
         ----- maybe it's just superstition
         ---- but i think this didn't work unless I explicitly asked for a variable `o`
         --- instead of _ <-
         --------- weird...
         o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
-        tracks <- H.liftAff (affable $ klank.tracks Nothing)
-        buffers <- H.liftAff (affable $ klank.buffers ctx Nothing)
-        floatArrays <- H.liftAff (affable $ klank.floatArrays Nothing)
-        periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx Nothing)
+        prevTracks <- H.gets _.tracks
+        tracks <- H.liftAff (affable $ klank.tracks prevTracks)
+        prevBuffers <- H.gets _.buffers
+        buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
+        prevFloatArrays <- H.gets _.floatArrays
+        floatArrays <- H.liftAff (affable $ klank.floatArrays prevFloatArrays)
+        prevPeriodicWaves <- H.gets _.periodicWaves
+        periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx prevPeriodicWaves)
         turnMeOff <-
           H.liftEffect
             ( klank.main
