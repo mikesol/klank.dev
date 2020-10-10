@@ -38,7 +38,11 @@ exports.getKlank = function () {
     window.klank.enableMicrophone = false;
   }
   if (!window.klank.accumulator) {
-    window.klank.accumulator = cbHack;
+    window.klank.accumulator = function (res) {
+      return function (rej) {
+        return res([]);
+      };
+    };;
   }
   if (!window.klank.tracks) {
     window.klank.tracks = cbHack;
