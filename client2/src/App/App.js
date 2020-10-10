@@ -19,14 +19,18 @@ exports.loadCustomAudioNodes = function (audioCtx) {
     return audioCtx.audioWorklet.addModule(process.env.AUDIO_MUL_URL);
   };
 };
-var cbHack = function (res) {
-  return function (rej) {
-    return res({});
+var cbHack = function () {
+  return function (res) {
+    return function (rej) {
+      return res({});
+    };
   };
 };
-var cbAHack = function (res) {
-  return function (rej) {
-    return res([]);
+var cbAHack = function () {
+  return function (res) {
+    return function (rej) {
+      return res([]);
+    };
   };
 };
 exports.getKlank = function () {

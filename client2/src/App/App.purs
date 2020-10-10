@@ -51,12 +51,12 @@ foreign import getKlank ::
   forall accumulator.
   Effect
     { enableMicrophone :: Boolean
-    , accumulator :: (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , worklets :: (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , tracks :: (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , buffers :: AudioContext -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , floatArrays :: (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , periodicWaves :: AudioContext -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , accumulator :: Maybe accumulator -> (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , worklets :: Maybe (Array String) -> (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , tracks :: Maybe (Object BrowserAudioTrack) -> (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , buffers :: AudioContext -> Maybe (Object BrowserAudioBuffer) -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , floatArrays :: Maybe (Object BrowserFloatArray) -> (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , periodicWaves :: AudioContext -> Maybe (Object BrowserPeriodicWave) -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
     , main ::
         accumulator ->
         Int ->
@@ -274,18 +274,18 @@ handleTerminalOutput = case _ of
             )
           else
             pure O.empty
-        accumulator <- H.liftAff (affable klank.accumulator)
-        worklets <- H.liftAff (affable klank.worklets)
+        accumulator <- H.liftAff (affable $ klank.accumulator Nothing)
+        worklets <- H.liftAff (affable $ klank.worklets Nothing)
         -------------
         ----- maybe it's just superstition
         ---- but i think this didn't work unless I explicitly asked for a variable `o`
         --- instead of _ <-
         --------- weird...
         o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
-        tracks <- H.liftAff (affable klank.tracks)
-        buffers <- H.liftAff (affable $ klank.buffers ctx)
-        floatArrays <- H.liftAff (affable klank.floatArrays)
-        periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx)
+        tracks <- H.liftAff (affable $ klank.tracks Nothing)
+        buffers <- H.liftAff (affable $ klank.buffers ctx Nothing)
+        floatArrays <- H.liftAff (affable $ klank.floatArrays Nothing)
+        periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx Nothing)
         turnMeOff <-
           H.liftEffect
             ( klank.main
