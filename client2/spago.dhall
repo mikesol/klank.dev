@@ -5,6 +5,7 @@
   , "affjax"
   , "argonaut-codecs"
   , "audio-behaviors"
+  , "b64"
   , "console"
   , "drawing"
   , "effect"

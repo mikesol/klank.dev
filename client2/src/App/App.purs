@@ -1,6 +1,7 @@
 module App.App where
 
 import Prelude
+
 import Ace (Position(..))
 import Ace.EditSession as EditSession
 import Ace.Editor as Editor
@@ -20,15 +21,17 @@ import Data.Argonaut.Encode (encodeJson)
 import Data.Either (Either(..), either)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
+import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
+import Data.String.Base64 (decode, encode)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
-import Effect.Exception (Error)
+import Effect.Exception (Error, throw)
 import FRP.Behavior.Audio (AudioContext, AudioInfo, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, VisualInfo, makeAudioContext, audioWorkletAddModule)
 import Foreign.Object (Object)
 import Foreign.Object as O
@@ -43,6 +46,18 @@ foreign import data BrowserMicrophone :: Type
 
 foreign import serverUrl :: Effect String
 
+foreign import firebaseUrl :: Effect String
+
+foreign import firebaseToken :: Effect String
+
+foreign import getK :: Effect Boolean
+
+foreign import getB64 :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
+
+foreign import escape :: String -> Effect String
+
+foreign import copyToClipboard :: String -> Effect Unit
+
 foreign import completelyUnsafeEval :: String -> Effect Unit
 
 foreign import canvasOrBust :: Effect CanvasElement
@@ -51,12 +66,12 @@ foreign import getKlank ::
   forall accumulator.
   Effect
     { enableMicrophone :: Boolean
-    , accumulator ::  (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , worklets ::  (Array String) -> (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , tracks ::  (Object BrowserAudioTrack) -> (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , buffers :: AudioContext ->  (Object BrowserAudioBuffer) -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , floatArrays ::  (Object BrowserFloatArray) -> (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , periodicWaves :: AudioContext ->  (Object BrowserPeriodicWave) -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , accumulator :: (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , worklets :: (Array String) -> (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , tracks :: (Object BrowserAudioTrack) -> (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , buffers :: AudioContext -> (Object BrowserAudioBuffer) -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , floatArrays :: (Object BrowserFloatArray) -> (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
+    , periodicWaves :: AudioContext -> (Object BrowserPeriodicWave) -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
     , main ::
         accumulator ->
         Int ->
@@ -83,11 +98,11 @@ type State accumulator
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
-    , worklets ::  Array String
-    , tracks ::  Object BrowserAudioTrack
-    , buffers ::  Object BrowserAudioBuffer
-    , floatArrays ::  Object BrowserFloatArray
-    , periodicWaves ::  Object BrowserPeriodicWave
+    , worklets :: Array String
+    , tracks :: Object BrowserAudioTrack
+    , buffers :: Object BrowserAudioBuffer
+    , floatArrays :: Object BrowserFloatArray
+    , periodicWaves :: Object BrowserPeriodicWave
     }
 
 data WhichAce
@@ -236,6 +251,24 @@ getMicrophone = toAffE getMicrophoneImpl
 handleAction :: forall a o m. MonadAff m => Action → H.HalogenM (State a) Action ChildSlots o m Unit
 handleAction = case _ of
   Initialize -> do
+    b64 <- H.liftEffect $ getB64 Nothing Just
+    k <- H.liftEffect $ getK
+    case b64 of
+      Nothing -> pure unit
+      Just txt ->
+        ( do
+            let editorText' = decode txt
+            either (const $ pure unit)
+              ( \editorText -> do
+                  H.modify_ (_ { editorText = editorText })
+                  _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
+                  pure unit
+              )
+              editorText'
+        )
+    case k of
+      true -> compile
+      false -> pure unit
     pure mempty
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
@@ -252,6 +285,75 @@ stopper = do
   H.modify_ (_ { audioCtx = Nothing })
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
+
+compile :: ∀ t119 t123 t124 t125 t126 t140 t293. MonadEffect t123 ⇒ MonadAff t123 ⇒ H.HalogenM t126 t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
+compile = do
+  url <- H.liftEffect serverUrl
+  txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
+  maybe
+    ( do
+        _ <-
+          H.query
+            _xterm
+            Terminal
+            $ H.tell (XTermComponent.ChangeText $ "\r\nWell, this is embarassing. We can't access the DOM, so this website won't work. Please file a bug request!\r\n$ ")
+        pure unit
+    )
+    ( \code -> do
+        _ <-
+          H.query
+            _xterm
+            Terminal
+            $ H.tell (XTermComponent.ChangeText $ "\r\nCompiling. Please be patient.\r\nThis should take 2-8 seconds depending on your internet connection speed.")
+        response <-
+          H.liftAff
+            $ AX.post AXRF.json url (Just (RequestBody.json $ encodeJson { code }))
+        either
+          ( const do
+              _ <-
+                H.query
+                  _xterm
+                  Terminal
+                  $ H.tell (XTermComponent.ChangeText $ "\r\nThe klank server is down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
+              pure unit
+          )
+          ( \{ body } -> do
+              let
+                body' = toObject body
+              maybe (pure unit)
+                ( \body'' -> do
+                    let
+                      error_ = getField body'' "error"
+                    let
+                      res_ = getField body'' "res"
+                    either
+                      ( const
+                          ( do
+                              _ <-
+                                H.query
+                                  _xterm
+                                  Terminal
+                                  $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, your code did not compile. Here is the error message:\r\n" <> either (const "Unidentified error") (replaceAll (Pattern "\n") (Replacement "\r\n")) error_ <> "\r\n$ ")
+                              pure unit
+                          )
+                      )
+                      ( \res -> do
+                          H.liftEffect $ completelyUnsafeEval res
+                          _ <-
+                            H.query
+                              _xterm
+                              Terminal
+                              $ H.tell (XTermComponent.ChangeText $ "\r\nSuccess! Your code is compiled.\r\np to play, s to stop.\r\n$ ")
+                          pure unit
+                      )
+                      res_
+                )
+                body'
+          )
+          response
+        pure unit
+    )
+    txt_
 
 handleTerminalOutput :: forall a o m. MonadAff m => XTermComponent.Output -> H.HalogenM (State a) Action ChildSlots o m Unit
 handleTerminalOutput = case _ of
@@ -322,8 +424,9 @@ handleTerminalOutput = case _ of
       Right CLI.Stop -> do
         _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
         stopper
-      Right CLI.Compile -> do
-        url <- H.liftEffect serverUrl
+      Right CLI.Compile -> compile
+      Right CLI.Link -> do
+        url <- H.liftEffect firebaseUrl
         txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
         maybe
           ( do
@@ -334,22 +437,43 @@ handleTerminalOutput = case _ of
                   $ H.tell (XTermComponent.ChangeText $ "\r\nWell, this is embarassing. We can't access the DOM, so this website won't work. Please file a bug request!\r\n$ ")
               pure unit
           )
-          ( \code -> do
+          ( \code' -> do
+              code <- maybe (H.liftEffect $ throw "Could not retrieve the code") pure code'
+              let asB64 = encode code
               _ <-
                 H.query
                   _xterm
                   Terminal
-                  $ H.tell (XTermComponent.ChangeText $ "\r\nCompiling. Please be patient.\r\nThis should take 2-8 seconds depending on your internet connection speed.")
+                  $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link and copying it to your clipboard.")
+              firebaseT <- H.liftEffect firebaseToken
               response <-
                 H.liftAff
-                  $ AX.post AXRF.json url (Just (RequestBody.json $ encodeJson { code }))
+                  $ AX.request
+                      ( AX.defaultRequest
+                          { headers = []
+                          , method = Left POST
+                          , url = url <> "?key=" <> firebaseT
+                          , content =
+                            ( Just
+                                ( RequestBody.json
+                                    $ encodeJson
+                                        { dynamicLinkInfo:
+                                            { domainUriPrefix: "https://link.klank.dev"
+                                            , link: "https://klank.dev/?k&b64=" <> asB64
+                                            }
+                                        }
+                                )
+                            )
+                          , responseFormat = AXRF.json
+                          }
+                      )
               either
                 ( const do
                     _ <-
                       H.query
                         _xterm
                         Terminal
-                        $ H.tell (XTermComponent.ChangeText $ "\r\nThe klank server is down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
+                        $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
                     pure unit
                 )
                 ( \{ body } -> do
@@ -358,9 +482,7 @@ handleTerminalOutput = case _ of
                     maybe (pure unit)
                       ( \body'' -> do
                           let
-                            error_ = getField body'' "error"
-                          let
-                            res_ = getField body'' "res"
+                            link_ = getField body'' "shortLink"
                           either
                             ( const
                                 ( do
@@ -368,20 +490,20 @@ handleTerminalOutput = case _ of
                                       H.query
                                         _xterm
                                         Terminal
-                                        $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, your code did not compile. Here is the error message:\r\n" <> either (const "Unidentified error") (replaceAll (Pattern "\n") (Replacement "\r\n")) error_ <> "\r\n$ ")
+                                        $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, we couldn't create a link. Please try again later.\r\n$ ")
                                     pure unit
                                 )
                             )
                             ( \res -> do
-                                H.liftEffect $ completelyUnsafeEval res
+                                H.liftEffect $ copyToClipboard res
                                 _ <-
                                   H.query
                                     _xterm
                                     Terminal
-                                    $ H.tell (XTermComponent.ChangeText $ "\r\nSuccess! Your code is compiled.\r\np to play, s to stop.\r\n$ ")
+                                    $ H.tell (XTermComponent.ChangeText $ "\r\nYour link has been copied to the clipboard. Share with reckless abandon!\r\n$ ")
                                 pure unit
                             )
-                            res_
+                            link_
                       )
                       body'
                 )
