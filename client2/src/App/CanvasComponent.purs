@@ -60,7 +60,7 @@ render =
   const
     $ HH.canvas
         [ HP.id_ "klank-canvas"
-        , HP.classes $ map ClassName []
+        , HP.classes $ map ClassName [ "h-full", "w-full" ]
         ]
 
 handleAction :: forall m. MonadAff m => Action -> H.HalogenM State Action () Output m Unit

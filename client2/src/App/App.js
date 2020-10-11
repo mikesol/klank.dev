@@ -33,6 +33,11 @@ exports.copyToClipboard = function (str) {
     document.body.removeChild(el);
   };
 };
+exports.canvasDimensionHack = function () {
+  var canvas = document.getElementById("klank-canvas");
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+};
 exports.serverUrl = function () {
   return process.env.SERVER_URI;
 };

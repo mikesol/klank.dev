@@ -1,7 +1,6 @@
 module App.App where
 
 import Prelude
-
 import Ace (Position(..))
 import Ace.EditSession as EditSession
 import Ace.Editor as Editor
@@ -55,6 +54,8 @@ foreign import getK :: Effect Boolean
 foreign import getB64 :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
 foreign import escape :: String -> Effect String
+
+foreign import canvasDimensionHack :: Effect Unit
 
 foreign import copyToClipboard :: String -> Effect Unit
 
@@ -257,7 +258,8 @@ handleAction = case _ of
       Nothing -> pure unit
       Just txt ->
         ( do
-            let editorText' = decode txt
+            let
+              editorText' = decode txt
             either (const $ pure unit)
               ( \editorText -> do
                   H.modify_ (_ { editorText = editorText })
@@ -369,9 +371,11 @@ handleTerminalOutput = case _ of
       Right CLI.EditorCanvas -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = SplitDisplay })
+        H.liftEffect canvasDimensionHack
       Right CLI.Canvas -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = CanvasDisplay })
+        H.liftEffect canvasDimensionHack
       Right CLI.Play -> do
         stopper
         klank <- H.liftEffect getKlank
@@ -439,7 +443,8 @@ handleTerminalOutput = case _ of
           )
           ( \code' -> do
               code <- maybe (H.liftEffect $ throw "Could not retrieve the code") pure code'
-              let asB64 = encode code
+              let
+                asB64 = encode code
               _ <-
                 H.query
                   _xterm
