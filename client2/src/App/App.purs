@@ -11,8 +11,9 @@ import App.AceComponent as AceComponent
 import App.AppAction (Action(..))
 import App.CLI as CLI
 import App.CanvasComponent as CanvasComponent
+import App.ClickPlayModal (clickPlay)
 import App.InitialPS (helpMsg, initialPS, welcomeMsg)
-import App.LinkModal (copyToClipboard, modal)
+import App.LinkModal (modal)
 import App.XTermComponent (focus, setFontSize, writeText)
 import App.XTermComponent as XTermComponent
 import Control.Monad.State (class MonadState)
@@ -57,6 +58,8 @@ foreign import getK :: Effect Boolean
 foreign import getC :: Effect Boolean
 
 foreign import getEC :: Effect Boolean
+
+foreign import getNoterm :: Effect Boolean
 
 foreign import ipfsGet :: String -> Effect (Promise String)
 
@@ -116,6 +119,8 @@ type State
     , worklets :: Array String
     , linkModalUrl :: String
     , linkModalOpen :: Boolean
+    , playModalOpen :: Boolean
+    , showTerminal :: Boolean
     , tracks :: Object BrowserAudioTrack
     , buffers :: Object BrowserAudioBuffer
     , floatArrays :: Object BrowserFloatArray
@@ -183,7 +188,9 @@ component =
           , stopFn: Nothing
           , audioCtx: Nothing
           , linkModalOpen: false
+          , showTerminal: true
           , linkModalUrl: ""
+          , playModalOpen: false
           , initialAccumulator: Nothing
           , worklets: []
           , tracks: O.empty
@@ -222,39 +229,48 @@ editorDisplay editorText =
     (Just <<< HandleAceUpdate)
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
-render { editorText, mainDisplay, linkModalOpen, linkModalUrl } =
+render { editorText, mainDisplay, linkModalOpen, linkModalUrl, playModalOpen, showTerminal } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
         [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
-        [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
-            EditorDisplay -> [ editorDisplay editorText ]
-            CanvasDisplay ->
-              [ HH.slot _canvas Canvas CanvasComponent.component
-                  {}
-                  absurd
+        ( join
+            [ [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
+                  EditorDisplay -> [ editorDisplay editorText ]
+                  CanvasDisplay ->
+                    [ HH.slot _canvas Canvas CanvasComponent.component
+                        {}
+                        absurd
+                    ]
+                  SplitDisplay ->
+                    [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
+                        [ editorDisplay editorText
+                        , HH.slot _canvas Canvas CanvasComponent.component
+                            {}
+                            absurd
+                        ]
+                    ]
               ]
-            SplitDisplay ->
-              [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
-                  [ editorDisplay editorText
-                  , HH.slot _canvas Canvas CanvasComponent.component
-                      {}
-                      absurd
-                  ]
-              ]
-        , HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
-            [ HH.slot _xterm Terminal XTermComponent.component
-                { terminalStyling:
-                    \t -> do
-                      setFontSize 20 t
-                      writeText welcomeMsg t
-                      focus t
-                }
-                (Just <<< HandleTerminalUpdate)
+            , if showTerminal then
+                [ HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
+                    [ HH.slot _xterm Terminal XTermComponent.component
+                        { terminalStyling:
+                            \t -> do
+                              setFontSize 20 t
+                              writeText welcomeMsg t
+                              focus t
+                        }
+                        (Just <<< HandleTerminalUpdate)
+                    ]
+                ]
+              else
+                []
             ]
-        ]
+        )
     , modal
-
         { url: linkModalUrl, open: linkModalOpen
+        }
+    , clickPlay
+        { open: playModalOpen
         }
     ]
 
@@ -269,8 +285,9 @@ getMicrophone = toAffE getMicrophoneImpl
 
 handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
-  CopyLinkToClipboard -> do
-    H.liftEffect copyToClipboard
+  PlayKlankFromModal -> do
+    H.modify_ (_ { playModalOpen = false })
+    playKlank
   CloseLinkModal -> do
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
@@ -279,6 +296,7 @@ handleAction = case _ of
     k <- H.liftEffect $ getK
     c <- H.liftEffect $ getC
     ec <- H.liftEffect $ getEC
+    noterm <- H.liftEffect $ getNoterm
     initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
     when ec
       ( do
@@ -288,6 +306,17 @@ handleAction = case _ of
     when c
       ( do
           H.modify_ (_ { mainDisplay = CanvasDisplay })
+          H.liftEffect canvasDimensionHack
+      )
+    when noterm
+      ( do
+          H.modify_
+            ( _
+                { showTerminal = false
+                , mainDisplay = CanvasDisplay
+                , playModalOpen = true
+                }
+            )
           H.liftEffect canvasDimensionHack
       )
     H.modify_ (_ { initialAccumulator = initialAccumulator })
@@ -403,6 +432,60 @@ compile = do
     )
     txt_
 
+playKlank :: ∀ t338 t341 m t346 t347. MonadEffect m ⇒ MonadAff m ⇒ H.HalogenM State t347 ( xterm ∷ H.Slot XTermComponent.Query t341 WhichTerm | t338 ) t346 m Unit
+playKlank = do
+  stopper
+  klank <- H.liftEffect getKlank
+  ctx <- H.liftEffect makeAudioContext
+  H.modify_ (_ { audioCtx = Just ctx })
+  H.liftAff (toAffE $ loadCustomAudioNodes ctx)
+  microphones <-
+    if klank.enableMicrophone then
+      ( do
+          mic <- H.liftAff getMicrophone
+          pure $ O.singleton "microphone" mic
+      )
+    else
+      pure O.empty
+  initialAccumulator <- H.gets _.initialAccumulator
+  accumulator <- case initialAccumulator of
+    Nothing -> H.liftAff (affable $ klank.accumulator)
+    Just acc -> pure acc
+  prevWorklets <- H.gets _.worklets
+  worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
+  H.modify_ (_ { worklets = worklets })
+  -------------
+  ----- maybe it's just superstition
+  ---- but i think this didn't work unless I explicitly asked for a variable `o`
+  --- instead of _ <-
+  --------- weird...
+  o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
+  prevTracks <- H.gets _.tracks
+  tracks <- H.liftAff (affable $ klank.tracks prevTracks)
+  H.modify_ (_ { tracks = tracks })
+  prevBuffers <- H.gets _.buffers
+  buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
+  H.modify_ (_ { buffers = buffers })
+  prevFloatArrays <- H.gets _.floatArrays
+  floatArrays <- H.liftAff (affable $ klank.floatArrays prevFloatArrays)
+  H.modify_ (_ { floatArrays = floatArrays })
+  prevPeriodicWaves <- H.gets _.periodicWaves
+  periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx prevPeriodicWaves)
+  H.modify_ (_ { periodicWaves = periodicWaves })
+  turnMeOff <-
+    H.liftEffect
+      ( klank.main
+          accumulator
+          20
+          15
+          ctx
+          { microphones, tracks, buffers, floatArrays, periodicWaves }
+          { canvases: O.singleton "canvas" canvasOrBust }
+      )
+  H.modify_ (_ { stopFn = Just turnMeOff })
+  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
+  pure unit
+
 handleTerminalOutput :: forall o m. MonadAff m => XTermComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
 handleTerminalOutput = case _ of
   XTermComponent.TextChanged tt -> do
@@ -422,58 +505,7 @@ handleTerminalOutput = case _ of
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = CanvasDisplay })
         H.liftEffect canvasDimensionHack
-      Right CLI.Play -> do
-        stopper
-        klank <- H.liftEffect getKlank
-        ctx <- H.liftEffect makeAudioContext
-        H.modify_ (_ { audioCtx = Just ctx })
-        H.liftAff (toAffE $ loadCustomAudioNodes ctx)
-        microphones <-
-          if klank.enableMicrophone then
-            ( do
-                mic <- H.liftAff getMicrophone
-                pure $ O.singleton "microphone" mic
-            )
-          else
-            pure O.empty
-        initialAccumulator <- H.gets _.initialAccumulator
-        accumulator <- case initialAccumulator of
-          Nothing -> H.liftAff (affable $ klank.accumulator)
-          Just acc -> pure acc
-        prevWorklets <- H.gets _.worklets
-        worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
-        H.modify_ (_ { worklets = worklets })
-        -------------
-        ----- maybe it's just superstition
-        ---- but i think this didn't work unless I explicitly asked for a variable `o`
-        --- instead of _ <-
-        --------- weird...
-        o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
-        prevTracks <- H.gets _.tracks
-        tracks <- H.liftAff (affable $ klank.tracks prevTracks)
-        H.modify_ (_ { tracks = tracks })
-        prevBuffers <- H.gets _.buffers
-        buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
-        H.modify_ (_ { buffers = buffers })
-        prevFloatArrays <- H.gets _.floatArrays
-        floatArrays <- H.liftAff (affable $ klank.floatArrays prevFloatArrays)
-        H.modify_ (_ { floatArrays = floatArrays })
-        prevPeriodicWaves <- H.gets _.periodicWaves
-        periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx prevPeriodicWaves)
-        H.modify_ (_ { periodicWaves = periodicWaves })
-        turnMeOff <-
-          H.liftEffect
-            ( klank.main
-                accumulator
-                20
-                15
-                ctx
-                { microphones, tracks, buffers, floatArrays, periodicWaves }
-                { canvases: O.singleton "canvas" canvasOrBust }
-            )
-        H.modify_ (_ { stopFn = Just turnMeOff })
-        _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
-        pure unit
+      Right CLI.Play -> playKlank
       Right CLI.Stop -> do
         _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
         stopper
