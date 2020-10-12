@@ -14,6 +14,7 @@ import App.CanvasComponent as CanvasComponent
 import App.ClickPlayModal (clickPlay)
 import App.InitialPS (helpMsg, initialPS, welcomeMsg)
 import App.LinkModal (modal)
+import App.LoadingModal (loading)
 import App.XTermComponent (focus, setFontSize, writeText)
 import App.XTermComponent as XTermComponent
 import Control.Monad.State (class MonadState)
@@ -118,6 +119,7 @@ type State
     , initialAccumulator :: Maybe Foreign
     , worklets :: Array String
     , linkModalUrl :: String
+    , loadingModalOpen :: Boolean
     , linkModalOpen :: Boolean
     , playModalOpen :: Boolean
     , showTerminal :: Boolean
@@ -187,6 +189,7 @@ component =
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
+          , loadingModalOpen: false
           , linkModalOpen: false
           , showTerminal: true
           , linkModalUrl: ""
@@ -229,7 +232,14 @@ editorDisplay editorText =
     (Just <<< HandleAceUpdate)
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
-render { editorText, mainDisplay, linkModalOpen, linkModalUrl, playModalOpen, showTerminal } =
+render { editorText
+, mainDisplay
+, linkModalOpen
+, linkModalUrl
+, loadingModalOpen
+, playModalOpen
+, showTerminal
+} =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
         [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
@@ -272,6 +282,9 @@ render { editorText, mainDisplay, linkModalOpen, linkModalUrl, playModalOpen, sh
     , clickPlay
         { open: playModalOpen
         }
+    , loading
+        { open: loadingModalOpen
+        }
     ]
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
@@ -310,11 +323,17 @@ handleAction = case _ of
       )
     when noterm
       ( do
-          compile
           H.modify_
             ( _
                 { showTerminal = false
+                , loadingModalOpen = true
                 , mainDisplay = CanvasDisplay
+                }
+            )
+          compile
+          H.modify_
+            ( _
+                { loadingModalOpen = false
                 , playModalOpen = true
                 }
             )

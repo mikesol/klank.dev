@@ -1,7 +1,6 @@
 module App.ClickPlayModal where
 
 import Prelude
-
 import App.AppAction (Action(..))
 import Data.Maybe (Maybe(..))
 import Halogen (ClassName(..))
@@ -12,7 +11,7 @@ import Halogen.HTML.Properties as HP
 clickPlay :: forall w. { open :: Boolean } -> HH.HTML w Action
 clickPlay { open } =
   HH.div
-    [ HP.classes $ map ClassName ([ "modal", "fixed", "w-full", "h-full", "top-0", "left-0", "flex", "items-center", "justify-center" ] <> if open then [] else ["opacity-0", "pointer-events-none"])
+    [ HP.classes $ map ClassName ([ "modal", "fixed", "w-full", "h-full", "top-0", "left-0", "flex", "items-center", "justify-center" ] <> if open then [] else [ "opacity-0", "pointer-events-none" ])
     ]
     [ HH.div
         [ HP.classes $ map ClassName [ "modal-overlay", "absolute", "w-full", "h-full", "bg-gray-900", "opacity-50" ]
@@ -30,7 +29,7 @@ clickPlay { open } =
                 [ HH.p
                     [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
                     ]
-                    [ HH.text "Welcome to klank.dev! 🎤🎧🔊" ]
+                    [ HH.text "Ready when you are! 🚀🎵" ]
                 ]
             , HH.p [] [ HH.text "Click or press play to start." ]
             , HH.div [ HP.classes $ map ClassName [ "flex", "justify-end", "pt-2" ] ]
@@ -39,4 +38,3 @@ clickPlay { open } =
             ]
         ]
     ]
-
