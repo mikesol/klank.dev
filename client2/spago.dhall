@@ -13,6 +13,7 @@
   , "halogen"
   , "parsing"
   , "psci-support"
+  , "svg-parser-halogen"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
