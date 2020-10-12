@@ -310,6 +310,7 @@ handleAction = case _ of
       )
     when noterm
       ( do
+          compile
           H.modify_
             ( _
                 { showTerminal = false
