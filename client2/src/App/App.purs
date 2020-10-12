@@ -23,7 +23,7 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
-import Data.String.Base64 (decode, encode)
+import Data.String.Base64 (decode)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse)
 import Effect (Effect)
@@ -51,7 +51,13 @@ foreign import firebaseToken :: Effect String
 
 foreign import getK :: Effect Boolean
 
+foreign import ifpsGet :: String -> Effect (Promise String)
+
+foreign import ifpsPut :: String -> Effect (Promise String)
+
 foreign import getB64 :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
+
+foreign import getIPFS :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
 foreign import escape :: String -> Effect String
 
@@ -253,6 +259,7 @@ handleAction :: forall a o m. MonadAff m => Action → H.HalogenM (State a) Acti
 handleAction = case _ of
   Initialize -> do
     b64 <- H.liftEffect $ getB64 Nothing Just
+    ipfs <- H.liftEffect $ getIPFS Nothing Just
     k <- H.liftEffect $ getK
     case b64 of
       Nothing -> pure unit
@@ -267,6 +274,15 @@ handleAction = case _ of
                   pure unit
               )
               editorText'
+        )
+    case ipfs of
+      Nothing -> pure unit
+      Just txt ->
+        ( do
+            editorText <- H.liftAff (toAffE $ ifpsGet txt)
+            H.modify_ (_ { editorText = editorText })
+            _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
+            pure unit
         )
     case k of
       true -> compile
@@ -443,13 +459,12 @@ handleTerminalOutput = case _ of
           )
           ( \code' -> do
               code <- maybe (H.liftEffect $ throw "Could not retrieve the code") pure code'
-              let
-                asB64 = encode code
               _ <-
                 H.query
                   _xterm
                   Terminal
                   $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link and copying it to your clipboard.")
+              asIPFS <- H.liftAff $ (toAffE $ ifpsPut code)
               firebaseT <- H.liftEffect firebaseToken
               response <-
                 H.liftAff
@@ -464,7 +479,7 @@ handleTerminalOutput = case _ of
                                     $ encodeJson
                                         { dynamicLinkInfo:
                                             { domainUriPrefix: "https://link.klank.dev"
-                                            , link: "https://klank.dev/?k&b64=" <> asB64
+                                            , link: "https://klank.dev/?k&ipfs=" <> asIPFS
                                             }
                                         }
                                 )

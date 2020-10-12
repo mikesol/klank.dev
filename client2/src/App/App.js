@@ -1,10 +1,19 @@
 var querystring = require("querystring-browser");
-
+var IPFS = require("ipfs");
 exports.getB64 = function (nothing) {
   return function (just) {
     return function () {
       var urlParams = new URLSearchParams(window.location.search);
       var myParam = urlParams.get("b64");
+      return myParam ? just(myParam) : nothing;
+    };
+  };
+};
+exports.getIPFS = function (nothing) {
+  return function (just) {
+    return function () {
+      var urlParams = new URLSearchParams(window.location.search);
+      var myParam = urlParams.get("ipfs");
       return myParam ? just(myParam) : nothing;
     };
   };
@@ -121,4 +130,43 @@ exports.canvasOrBust = function () {
 
 exports.getMicrophoneImpl = function () {
   return navigator.mediaDevices.getUserMedia({ audio: true });
+};
+
+exports.ifpsPut = function (s) {
+  return function () {
+    return IPFS.create()
+      .then(function (node) {
+        return node.add(s);
+      })
+      .then(function (results) {
+        return results.path;
+      });
+  };
+};
+
+exports.ifpsGet = function (s) {
+  return function () {
+    var piter = function (r) {
+      if (r.res.done) {
+        return r.data + (r.res && r.res.value ? r.res.value.toString() : "");
+      }
+      return r.iter.next().then(function (res) {
+        return piter({
+          res: res,
+          iter: r.iter,
+          data: r.data + r.res.value.toString(),
+        });
+      });
+    };
+    return IPFS.create().then(function (node) {
+      var iter = node.cat(s);
+      return iter.next().then(function (res) {
+        return piter({
+          iter: iter,
+          res: res,
+          data: "",
+        });
+      });
+    });
+  };
 };
