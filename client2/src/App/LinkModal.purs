@@ -11,8 +11,6 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Svg.Parser (SvgAttribute(..), SvgNode(..))
 import Svg.Renderer.Halogen (svgElementToHtml)
-import Effect(Effect)
-foreign import copyToClipboard :: Effect Unit
 
 mc :: ∀ t4 t5. String → HH.HTML t5 t4
 mc color =
@@ -74,11 +72,10 @@ modal { url, open } =
                     [ mc "text-black"
                     ]
                 ]
-            , HH.p [] [ HH.text "Here is the link to your klank." ]
+            , HH.p [] [ HH.text "Below is the link to your klank.  Copy it and share with reckless abandon! 🚀" ]
             , HH.p [HP.id_ "klank-share-url"] [ HH.text url ]
             , HH.div [ HP.classes $ map ClassName [ "flex", "justify-end", "pt-2" ] ]
-                [ {-HH.button [ HP.classes $ map ClassName [ "px-4", "bg-transparent", "p-3", "rounded-lg", "text-indigo-500", "hover:bg-gray-100", "hover:text-indigo-400", "mr-2" ],  HE.onClick \_ -> Just CopyLinkToClipboard ] [ HH.text "Copy to clipboard" ]
-                , -}HH.button [ HP.classes $ map ClassName [ "modal-close px-4", "bg-indigo-500", "p-3", "rounded-lg", "text-white", "hover:bg-indigo-400" ], HE.onClick \_ -> Just CloseLinkModal ] [ HH.text "Close" ]
+                [ HH.button [ HP.classes $ map ClassName [ "modal-close px-4", "bg-indigo-500", "p-3", "rounded-lg", "text-white", "hover:bg-indigo-400" ], HE.onClick \_ -> Just CloseLinkModal ] [ HH.text "Close" ]
                 ]
             ]
         ]
