@@ -321,24 +321,6 @@ handleAction = case _ of
           H.modify_ (_ { mainDisplay = CanvasDisplay })
           H.liftEffect canvasDimensionHack
       )
-    when noterm
-      ( do
-          H.modify_
-            ( _
-                { showTerminal = false
-                , loadingModalOpen = true
-                , mainDisplay = CanvasDisplay
-                }
-            )
-          compile
-          H.modify_
-            ( _
-                { loadingModalOpen = false
-                , playModalOpen = true
-                }
-            )
-          H.liftEffect canvasDimensionHack
-      )
     H.modify_ (_ { initialAccumulator = initialAccumulator })
     case b64 of
       Nothing -> pure unit
@@ -366,6 +348,24 @@ handleAction = case _ of
     case k of
       true -> compile
       false -> pure unit
+    when noterm
+      ( do
+          H.modify_
+            ( _
+                { showTerminal = false
+                , loadingModalOpen = true
+                , mainDisplay = CanvasDisplay
+                }
+            )
+          compile
+          H.modify_
+            ( _
+                { loadingModalOpen = false
+                , playModalOpen = true
+                }
+            )
+          H.liftEffect canvasDimensionHack
+      )
     pure mempty
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
