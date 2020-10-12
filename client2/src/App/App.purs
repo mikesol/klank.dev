@@ -8,9 +8,11 @@ import Affjax as AX
 import Affjax.RequestBody as RequestBody
 import Affjax.ResponseFormat as AXRF
 import App.AceComponent as AceComponent
+import App.AppAction (Action(..))
 import App.CLI as CLI
 import App.CanvasComponent as CanvasComponent
 import App.InitialPS (helpMsg, initialPS, welcomeMsg)
+import App.LinkModal (copyToClipboard, modal)
 import App.XTermComponent (focus, setFontSize, writeText)
 import App.XTermComponent as XTermComponent
 import Control.Monad.State (class MonadState)
@@ -70,8 +72,6 @@ foreign import escape :: String -> Effect String
 
 foreign import canvasDimensionHack :: Effect Unit
 
-foreign import copyToClipboard :: String -> Effect Unit
-
 foreign import completelyUnsafeEval :: String -> Effect Unit
 
 foreign import canvasOrBust :: Effect CanvasElement
@@ -114,6 +114,8 @@ type State
     , audioCtx :: Maybe AudioContext
     , initialAccumulator :: Maybe Foreign
     , worklets :: Array String
+    , linkModalUrl :: String
+    , linkModalOpen :: Boolean
     , tracks :: Object BrowserAudioTrack
     , buffers :: Object BrowserAudioBuffer
     , floatArrays :: Object BrowserFloatArray
@@ -165,11 +167,6 @@ type ChildSlots
     , canvas :: CanvasComponent.Slot WhichCanvas
     )
 
-data Action
-  = Initialize
-  | HandleAceUpdate AceComponent.Output
-  | HandleTerminalUpdate XTermComponent.Output
-
 affable :: forall a. ((a -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit) -> Aff a
 affable f =
   makeAff \cb -> do
@@ -185,6 +182,8 @@ component =
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
+          , linkModalOpen: false
+          , linkModalUrl: ""
           , initialAccumulator: Nothing
           , worklets: []
           , tracks: O.empty
@@ -223,7 +222,7 @@ editorDisplay editorText =
     (Just <<< HandleAceUpdate)
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
-render { editorText, mainDisplay } =
+render { editorText, mainDisplay, linkModalOpen, linkModalUrl } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
         [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
@@ -253,6 +252,10 @@ render { editorText, mainDisplay } =
                 (Just <<< HandleTerminalUpdate)
             ]
         ]
+    , modal
+
+        { url: linkModalUrl, open: linkModalOpen
+        }
     ]
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
@@ -266,6 +269,10 @@ getMicrophone = toAffE getMicrophoneImpl
 
 handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
+  CopyLinkToClipboard -> do
+    H.liftEffect copyToClipboard
+  CloseLinkModal -> do
+    H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
     b64 <- H.liftEffect $ getB64 Nothing Just
     ipfs <- H.liftEffect $ getIPFS Nothing Just
@@ -489,7 +496,7 @@ handleTerminalOutput = case _ of
                 H.query
                   _xterm
                   Terminal
-                  $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link and copying it to your clipboard.")
+                  $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link...")
               asIPFS <- H.liftAff $ (toAffE $ ipfsPut code)
               firebaseT <- H.liftEffect firebaseToken
               response <-
@@ -541,12 +548,12 @@ handleTerminalOutput = case _ of
                                 )
                             )
                             ( \res -> do
-                                H.liftEffect $ copyToClipboard res
+                                H.modify_ (_ { linkModalUrl = res, linkModalOpen = true })
                                 _ <-
                                   H.query
                                     _xterm
                                     Terminal
-                                    $ H.tell (XTermComponent.ChangeText $ "\r\nYour link has been copied to the clipboard. Share with reckless abandon!\r\n$ ")
+                                    $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
                                 pure unit
                             )
                             link_

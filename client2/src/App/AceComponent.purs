@@ -67,7 +67,7 @@ render =
   const
     $ HH.div
         [ HP.ref (H.RefLabel "ace")
-        , HP.classes $ map ClassName [ "h-full", "w-full" ]
+        , HP.classes $ map ClassName [ "h-full", "w-full", "z-auto" ]
         ]
         []
 
