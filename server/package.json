@@ -18,6 +18,7 @@
     "esbuild": "^0.7.8",
     "express": "^4.17.1",
     "helmet": "^4.1.1",
+    "node-libcurl": "^2.2.0",
     "purescript": "^0.13.8",
     "spago": "^0.16.0"
   }

@@ -62,15 +62,11 @@ foreign import getEC :: Effect Boolean
 
 foreign import getNoterm :: Effect Boolean
 
-foreign import ipfsGet :: String -> Effect (Promise String)
-
-foreign import ipfsPut :: String -> Effect (Promise String)
-
 foreign import getB64 :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
 foreign import getInitialAccumulator :: Maybe Foreign -> (Foreign -> Maybe Foreign) -> Effect (Maybe Foreign)
 
-foreign import getIPFS :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
+foreign import getUrl :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
 foreign import escape :: String -> Effect String
 
@@ -305,7 +301,7 @@ handleAction = case _ of
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
     b64 <- H.liftEffect $ getB64 Nothing Just
-    ipfs <- H.liftEffect $ getIPFS Nothing Just
+    url <- H.liftEffect $ getUrl Nothing Just
     k <- H.liftEffect $ getK
     c <- H.liftEffect $ getC
     ec <- H.liftEffect $ getEC
@@ -336,11 +332,23 @@ handleAction = case _ of
               )
               editorText'
         )
-    case ipfs of
+    case url of
       Nothing -> pure unit
       Just txt ->
         ( do
-            editorText <- H.liftAff (toAffE $ ipfsGet txt)
+            result <-
+              H.liftAff
+                $ AX.request
+                    ( AX.defaultRequest
+                        { url = txt
+                        , method = Left GET
+                        , responseFormat = AXRF.string
+                        }
+                    )
+            editorText <-
+              either (\_ -> H.liftEffect $ throw "Could not retrieve")
+                (pure <<< _.body)
+                result
             H.modify_ (_ { editorText = editorText })
             _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
             pure unit
@@ -552,7 +560,38 @@ handleTerminalOutput = case _ of
                   _xterm
                   Terminal
                   $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link...")
-              asIPFS <- H.liftAff $ (toAffE $ ipfsPut code)
+              -- mx@
+              surl <- H.liftEffect serverUrl
+              _0x0' <-
+                H.liftAff
+                  $ AX.request
+                      ( AX.defaultRequest
+                          { headers = []
+                          , method = Left POST
+                          , url = (surl <> "/0x0")
+                          , content =
+                            ( Just
+                                ( RequestBody.json
+                                    $ encodeJson
+                                        { code }
+                                )
+                            )
+                          , responseFormat = AXRF.string
+                          }
+                      )
+              _0x0 <-
+                either
+                  ( \_ -> do
+                      _ <-
+                        H.query
+                          _xterm
+                          Terminal
+                          $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
+                      pure unit
+                      H.liftEffect $ throw "Could not process sound."
+                  )
+                  (pure <<< _.body)
+                  _0x0'
               firebaseT <- H.liftEffect firebaseToken
               response <-
                 H.liftAff
@@ -566,8 +605,9 @@ handleTerminalOutput = case _ of
                                 ( RequestBody.json
                                     $ encodeJson
                                         { dynamicLinkInfo:
+                                            -- mx@
                                             { domainUriPrefix: "https://link.klank.dev"
-                                            , link: "https://klank.dev/?k&ipfs=" <> asIPFS
+                                            , link: "https://klank.dev/?k&url=" <> _0x0
                                             }
                                         }
                                 )

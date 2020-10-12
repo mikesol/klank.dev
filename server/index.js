@@ -5,8 +5,8 @@ var helmet = require("helmet");
 var cors = require("cors");
 var app = express();
 var fs = require("fs");
-var child_process = require("child_process");
-
+var libcurl = require("node-libcurl");
+var Curl = libcurl.Curl;
 app.use(cors());
 app.use(helmet());
 app.post("/", bodyParser.json(), function (req, res) {
@@ -26,15 +26,25 @@ app.post("/0x0", bodyParser.json(), function (req, res) {
   }
   var fn = new Date().getTime() + "" + Math.random() + ".txt";
   fs.writeFileSync(fn, req.body.code);
-  child_process.exec("curl -F file=@" + fn + " http://0x0.st", function (a, b) {
-    if (a !== null) {
-      res.status(400);
-      res.send("bad request");
-    } else {
-      res.send(b);
-    }
+  const curl = new Curl();
+  const close = curl.close.bind(curl);
+
+  curl.setOpt(Curl.option.URL, "http://0x0.st");
+  curl.setOpt(Curl.option.HTTPPOST, [
+    { name: "file", file: fn, type: "text/plain" },
+  ]);
+
+  curl.on("end", function (s, d) {
+    res.send(d.split("\n")[0]);
     fs.unlinkSync(fn);
+    close();
   });
+  curl.on("error", function () {
+    res.status(400).send();
+    fs.unlinkSync(fn);
+    close();
+  });
+  curl.perform();
 });
 
 app.listen(process.env.PORT || 3000, () => {

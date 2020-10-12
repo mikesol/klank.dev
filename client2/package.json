@@ -21,7 +21,6 @@
   "dependencies": {
     "firebase": "^7.21.1",
     "firebaseui": "^4.6.1",
-    "ipfs": "^0.50.2",
     "querystring-browser": "^1.0.4",
     "xterm": "^4.9.0",
     "xterm-addon-web-links": "^0.4.0"
