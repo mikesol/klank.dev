@@ -383,10 +383,13 @@ stopper = do
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
-compile :: ∀ t119 t123 t124 t125 t126 t140 t293. MonadEffect t123 ⇒ MonadAff t123 ⇒ H.HalogenM t126 t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
+compile :: ∀ t119 t123 t124 t125 t140 t293. MonadEffect t123 ⇒ MonadAff t123 ⇒ H.HalogenM State t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
 compile = do
   url <- H.liftEffect serverUrl
-  txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
+  -- in case we are in compile mode, we use editorText
+  txt_ <-
+    (H.query _ace Editor $ H.request AceComponent.GetText)
+      >>= (maybe (Just <$> H.gets _.editorText) pure)
   maybe
     ( do
         _ <-
