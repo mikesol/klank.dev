@@ -18,6 +18,22 @@ exports.getIPFS = function (nothing) {
     };
   };
 };
+exports.getInitialAccumulator = function (nothing) {
+  return function (just) {
+    return function () {
+      var urlParams = new URLSearchParams(window.location.search);
+      var myParam = urlParams.get("acc");
+      if (myParam) {
+        try {
+          return just(JSON.parse(myParam));
+        } catch (e) {
+          return nothing;
+        }
+      }
+      return nothing;
+    };
+  };
+};
 exports.getK = function () {
   var urlParams = new URLSearchParams(window.location.search);
   var myParam = urlParams.get("k");
@@ -132,22 +148,27 @@ exports.getMicrophoneImpl = function () {
   return navigator.mediaDevices.getUserMedia({ audio: true });
 };
 
-exports.ifpsPut = function (s) {
+exports.ipfsPut = function (s) {
   return function () {
+    let n;
     return IPFS.create()
       .then(function (node) {
+        n = node;
         return node.add(s);
       })
       .then(function (results) {
+        n.stop();
         return results.path;
       });
   };
 };
 
-exports.ifpsGet = function (s) {
+exports.ipfsGet = function (s) {
   return function () {
+    let n;
     var piter = function (r) {
       if (r.res.done) {
+        n.stop();
         return r.data + (r.res && r.res.value ? r.res.value.toString() : "");
       }
       return r.iter.next().then(function (res) {
@@ -159,6 +180,7 @@ exports.ifpsGet = function (s) {
       });
     };
     return IPFS.create().then(function (node) {
+      n = node;
       var iter = node.cat(s);
       return iter.next().then(function (res) {
         return piter({
