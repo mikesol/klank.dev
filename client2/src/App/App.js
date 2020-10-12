@@ -40,6 +40,18 @@ exports.getK = function () {
   return myParam === null || myParam === "false" ? false : true;
 };
 
+exports.getC = function () {
+  var urlParams = new URLSearchParams(window.location.search);
+  var myParam = urlParams.get("c");
+  return myParam === null || myParam === "false" ? false : true;
+};
+
+exports.getEC = function () {
+  var urlParams = new URLSearchParams(window.location.search);
+  var myParam = urlParams.get("ec");
+  return myParam === null || myParam === "false" ? false : true;
+};
+
 exports.escape = function (s) {
   return function () {
     return querystring.escape(s);

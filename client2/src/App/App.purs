@@ -52,6 +52,10 @@ foreign import firebaseToken :: Effect String
 
 foreign import getK :: Effect Boolean
 
+foreign import getC :: Effect Boolean
+
+foreign import getEC :: Effect Boolean
+
 foreign import ipfsGet :: String -> Effect (Promise String)
 
 foreign import ipfsPut :: String -> Effect (Promise String)
@@ -266,7 +270,19 @@ handleAction = case _ of
     b64 <- H.liftEffect $ getB64 Nothing Just
     ipfs <- H.liftEffect $ getIPFS Nothing Just
     k <- H.liftEffect $ getK
+    c <- H.liftEffect $ getC
+    ec <- H.liftEffect $ getEC
     initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
+    when ec
+      ( do
+          H.modify_ (_ { mainDisplay = SplitDisplay })
+          H.liftEffect canvasDimensionHack
+      )
+    when c
+      ( do
+          H.modify_ (_ { mainDisplay = CanvasDisplay })
+          H.liftEffect canvasDimensionHack
+      )
     H.modify_ (_ { initialAccumulator = initialAccumulator })
     case b64 of
       Nothing -> pure unit
