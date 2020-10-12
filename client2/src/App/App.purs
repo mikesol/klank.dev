@@ -32,6 +32,7 @@ import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, throw)
 import FRP.Behavior.Audio (AudioContext, AudioInfo, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, VisualInfo, makeAudioContext, audioWorkletAddModule)
+import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as O
 import Graphics.Canvas (CanvasElement)
@@ -51,11 +52,13 @@ foreign import firebaseToken :: Effect String
 
 foreign import getK :: Effect Boolean
 
-foreign import ifpsGet :: String -> Effect (Promise String)
+foreign import ipfsGet :: String -> Effect (Promise String)
 
-foreign import ifpsPut :: String -> Effect (Promise String)
+foreign import ipfsPut :: String -> Effect (Promise String)
 
 foreign import getB64 :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
+
+foreign import getInitialAccumulator :: Maybe Foreign -> (Foreign -> Maybe Foreign) -> Effect (Maybe Foreign)
 
 foreign import getIPFS :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
@@ -100,11 +103,12 @@ data MainDisplay
   | CanvasDisplay
   | SplitDisplay
 
-type State accumulator
+type State
   = { editorText :: String
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
+    , initialAccumulator :: Maybe Foreign
     , worklets :: Array String
     , tracks :: Object BrowserAudioTrack
     , buffers :: Object BrowserAudioBuffer
@@ -177,6 +181,7 @@ component =
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
+          , initialAccumulator: Nothing
           , worklets: []
           , tracks: O.empty
           , buffers: O.empty
@@ -213,7 +218,7 @@ editorDisplay editorText =
     }
     (Just <<< HandleAceUpdate)
 
-render :: forall a m. MonadAff m => (State a) -> H.ComponentHTML Action ChildSlots m
+render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
 render { editorText, mainDisplay } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
@@ -255,12 +260,14 @@ foreign import getMicrophoneImpl :: Effect (Promise BrowserMicrophone)
 getMicrophone :: Aff BrowserMicrophone
 getMicrophone = toAffE getMicrophoneImpl
 
-handleAction :: forall a o m. MonadAff m => Action → H.HalogenM (State a) Action ChildSlots o m Unit
+handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
   Initialize -> do
     b64 <- H.liftEffect $ getB64 Nothing Just
     ipfs <- H.liftEffect $ getIPFS Nothing Just
     k <- H.liftEffect $ getK
+    initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
+    H.modify_ (_ { initialAccumulator = initialAccumulator })
     case b64 of
       Nothing -> pure unit
       Just txt ->
@@ -279,7 +286,7 @@ handleAction = case _ of
       Nothing -> pure unit
       Just txt ->
         ( do
-            editorText <- H.liftAff (toAffE $ ifpsGet txt)
+            editorText <- H.liftAff (toAffE $ ipfsGet txt)
             H.modify_ (_ { editorText = editorText })
             _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
             pure unit
@@ -291,7 +298,7 @@ handleAction = case _ of
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
 
-handleAceOuput :: forall a o m. MonadAff m => AceComponent.Output -> H.HalogenM (State a) Action ChildSlots o m Unit
+handleAceOuput :: forall o m. MonadAff m => AceComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
 handleAceOuput = case _ of
   AceComponent.TextChanged editorText -> H.modify_ (_ { editorText = editorText })
 
@@ -373,7 +380,7 @@ compile = do
     )
     txt_
 
-handleTerminalOutput :: forall a o m. MonadAff m => XTermComponent.Output -> H.HalogenM (State a) Action ChildSlots o m Unit
+handleTerminalOutput :: forall o m. MonadAff m => XTermComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
 handleTerminalOutput = case _ of
   XTermComponent.TextChanged tt -> do
     let
@@ -406,7 +413,10 @@ handleTerminalOutput = case _ of
             )
           else
             pure O.empty
-        accumulator <- H.liftAff (affable $ klank.accumulator)
+        initialAccumulator <- H.gets _.initialAccumulator
+        accumulator <- case initialAccumulator of
+          Nothing -> H.liftAff (affable $ klank.accumulator)
+          Just acc -> pure acc
         prevWorklets <- H.gets _.worklets
         worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
         H.modify_ (_ { worklets = worklets })
@@ -464,7 +474,7 @@ handleTerminalOutput = case _ of
                   _xterm
                   Terminal
                   $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link and copying it to your clipboard.")
-              asIPFS <- H.liftAff $ (toAffE $ ifpsPut code)
+              asIPFS <- H.liftAff $ (toAffE $ ipfsPut code)
               firebaseT <- H.liftEffect firebaseToken
               response <-
                 H.liftAff
