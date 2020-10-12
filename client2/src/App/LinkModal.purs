@@ -72,7 +72,7 @@ modal { url, open } =
                     [ mc "text-black"
                     ]
                 ]
-            , HH.p [] [ HH.text "Here is the link to your klank." ]
+            , HH.p [] [ HH.text "Below is the link to your klank.  Copy it and share with reckless abandon! 🚀" ]
             , HH.p [HP.id_ "klank-share-url"] [ HH.text url ]
             , HH.div [ HP.classes $ map ClassName [ "flex", "justify-end", "pt-2" ] ]
                 [ HH.button [ HP.classes $ map ClassName [ "modal-close px-4", "bg-indigo-500", "p-3", "rounded-lg", "text-white", "hover:bg-indigo-400" ], HE.onClick \_ -> Just CloseLinkModal ] [ HH.text "Close" ]

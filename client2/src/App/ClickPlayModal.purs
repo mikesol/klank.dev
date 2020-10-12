@@ -30,7 +30,7 @@ clickPlay { open } =
                 [ HH.p
                     [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
                     ]
-                    [ HH.text "Welcome to klank.dev!" ]
+                    [ HH.text "Welcome to klank.dev! 🎤🎧🔊" ]
                 ]
             , HH.p [] [ HH.text "Click or press play to start." ]
             , HH.div [ HP.classes $ map ClassName [ "flex", "justify-end", "pt-2" ] ]
