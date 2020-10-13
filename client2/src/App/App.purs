@@ -451,7 +451,7 @@ compile = do
                             H.query
                               _xterm
                               Terminal
-                              $ H.tell (XTermComponent.ChangeText $ "\r\nSuccess! Your code is compiled.\r\np to play, s to stop.\r\n$ ")
+                              $ H.tell (XTermComponent.ChangeText $ "\r\nSuccess! Your code is compiled.\r\nType p then ENTER to play, s then ENTER to stop.\r\n$ ")
                           pure unit
                       )
                       res_
