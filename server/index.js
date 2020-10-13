@@ -24,7 +24,8 @@ app.post("/0x0", bodyParser.json(), function (req, res) {
   if (!req.body.code) {
     throw new Error("Need a code param");
   }
-  var fn = new Date().getTime() + "" + Math.random() + ".txt";
+  var fn =
+    new Date().getTime() + "" + Math.floor(Math.random() * 1000) + ".txt";
   fs.writeFileSync(fn, req.body.code);
   const curl = new Curl();
   const close = curl.close.bind(curl);
@@ -35,6 +36,7 @@ app.post("/0x0", bodyParser.json(), function (req, res) {
   ]);
 
   curl.on("end", function (s, d) {
+    console.log("received result", s, d, "end of transmission");
     res.send(d.split("\n")[0]);
     fs.unlinkSync(fn);
     close();
