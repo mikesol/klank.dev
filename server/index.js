@@ -26,9 +26,12 @@ app.post("/u", bodyParser.json(), function (req, res) {
     throw new Error("Need a code param");
   }
   if (
-    req.body.code.indexOf("module") < 0 ||
-    req.body.code.indexOf("main") < 0 ||
-    req.body.code.indexOf("runInBrowser") < 0
+    (req.body.code.indexOf("module") < 0 ||
+      req.body.code.indexOf("main") < 0 ||
+      req.body.code.indexOf("runInBrowser") < 0) &&
+    (req.body.code.indexOf("AudioWorkletProcessor") < 0 ||
+      req.body.code.indexOf("process") < 0 ||
+      req.body.code.indexOf("registerProcessor") < 0)
   ) {
     throw new Error("invalid input");
   }
