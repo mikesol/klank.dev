@@ -118,6 +118,7 @@ type State
     , linkModalUrl :: String
     , loadingModalOpen :: Boolean
     , linkModalOpen :: Boolean
+    , linkModalProperNoun :: String
     , playModalOpen :: Boolean
     , showTerminal :: Boolean
     , tracks :: Object BrowserAudioTrack
@@ -190,6 +191,7 @@ component =
           , linkModalOpen: false
           , showTerminal: true
           , linkModalUrl: ""
+          , linkModalProperNoun: "klank"
           , playModalOpen: false
           , initialAccumulator: Nothing
           , worklets: []
@@ -233,6 +235,7 @@ render { editorText
 , mainDisplay
 , linkModalOpen
 , linkModalUrl
+, linkModalProperNoun
 , loadingModalOpen
 , playModalOpen
 , showTerminal
@@ -274,7 +277,7 @@ render { editorText
             ]
         )
     , modal
-        { url: linkModalUrl, open: linkModalOpen
+        { url: linkModalUrl, open: linkModalOpen, properNoun: linkModalProperNoun
         }
     , clickPlay
         { open: playModalOpen
@@ -517,6 +520,131 @@ playKlank = do
   _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
   pure unit
 
+-- todo - avoid Firebase call for extra link
+makeLink :: ∀ m t723 t724. MonadEffect m ⇒ MonadAff m ⇒ Boolean -> H.HalogenM State t724 ChildSlots t723 m Unit
+makeLink justLink = do
+  url <- H.liftEffect firebaseUrl
+  txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
+  maybe
+    ( do
+        _ <-
+          H.query
+            _xterm
+            Terminal
+            $ H.tell (XTermComponent.ChangeText $ "\r\nWell, this is embarassing. We can't access the DOM, so this website won't work. Please file a bug request!\r\n$ ")
+        pure unit
+    )
+    ( \code' -> do
+        code <- maybe (H.liftEffect $ throw "Could not retrieve the code") pure code'
+        _ <-
+          H.query
+            _xterm
+            Terminal
+            $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link...")
+        -- mx@
+        surl <- H.liftEffect serverUrl
+        _uploadLink' <-
+          H.liftAff
+            $ AX.request
+                ( AX.defaultRequest
+                    { headers = []
+                    , method = Left POST
+                    , url = (surl <> "u")
+                    , content =
+                      ( Just
+                          ( RequestBody.json
+                              $ encodeJson
+                                  { code }
+                          )
+                      )
+                    , responseFormat = AXRF.string
+                    }
+                )
+        _uploadLink <-
+          either
+            ( \_ -> do
+                _ <-
+                  H.query
+                    _xterm
+                    Terminal
+                    $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
+                pure unit
+                H.liftEffect $ throw "Could not process sound."
+            )
+            (pure <<< _.body)
+            _uploadLink'
+        firebaseT <- H.liftEffect firebaseToken
+        response <-
+          H.liftAff
+            $ AX.request
+                ( AX.defaultRequest
+                    { headers = []
+                    , method = Left POST
+                    , url = url <> "?key=" <> firebaseT
+                    , content =
+                      ( Just
+                          ( RequestBody.json
+                              $ encodeJson
+                                  { dynamicLinkInfo:
+                                      -- mx@
+                                      { domainUriPrefix: "https://link.klank.dev"
+                                      , link: "https://klank.dev/?k&url=" <> _uploadLink
+                                      }
+                                  }
+                          )
+                      )
+                    , responseFormat = AXRF.json
+                    }
+                )
+        either
+          ( const do
+              _ <-
+                H.query
+                  _xterm
+                  Terminal
+                  $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
+              pure unit
+          )
+          ( \{ status: (StatusCode sc), body } -> do
+              let
+                body' = toObject body
+              maybe (pure unit)
+                ( \body'' -> do
+                    let
+                      link_ = getField body'' "shortLink"
+                    maybe
+                      ( do
+                          _ <-
+                            H.query
+                              _xterm
+                              Terminal
+                              $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, we couldn't create a link. Please try again later.\r\n$ ")
+                          pure unit
+                      )
+                      ( \res -> do
+                          H.modify_
+                            ( _
+                                { linkModalUrl = if justLink then _uploadLink else res
+                                , linkModalOpen = true
+                                , linkModalProperNoun = if justLink then "file" else "klank"
+                                }
+                            )
+                          _ <-
+                            H.query
+                              _xterm
+                              Terminal
+                              $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
+                          pure unit
+                      )
+                      ((either (const Nothing) Just link_) >>= \x -> if (sc >= 400) then Nothing else Just x)
+                )
+                body'
+          )
+          response
+        pure unit
+    )
+    txt_
+
 handleTerminalOutput :: forall o m. MonadAff m => XTermComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
 handleTerminalOutput = case _ of
   XTermComponent.TextChanged tt -> do
@@ -541,120 +669,6 @@ handleTerminalOutput = case _ of
         _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
         stopper
       Right CLI.Compile -> compile
-      Right CLI.Link -> do
-        url <- H.liftEffect firebaseUrl
-        txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
-        maybe
-          ( do
-              _ <-
-                H.query
-                  _xterm
-                  Terminal
-                  $ H.tell (XTermComponent.ChangeText $ "\r\nWell, this is embarassing. We can't access the DOM, so this website won't work. Please file a bug request!\r\n$ ")
-              pure unit
-          )
-          ( \code' -> do
-              code <- maybe (H.liftEffect $ throw "Could not retrieve the code") pure code'
-              _ <-
-                H.query
-                  _xterm
-                  Terminal
-                  $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link...")
-              -- mx@
-              surl <- H.liftEffect serverUrl
-              _uploadLink' <-
-                H.liftAff
-                  $ AX.request
-                      ( AX.defaultRequest
-                          { headers = []
-                          , method = Left POST
-                          , url = (surl <> "u")
-                          , content =
-                            ( Just
-                                ( RequestBody.json
-                                    $ encodeJson
-                                        { code }
-                                )
-                            )
-                          , responseFormat = AXRF.string
-                          }
-                      )
-              _uploadLink <-
-                either
-                  ( \_ -> do
-                      _ <-
-                        H.query
-                          _xterm
-                          Terminal
-                          $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
-                      pure unit
-                      H.liftEffect $ throw "Could not process sound."
-                  )
-                  (pure <<< _.body)
-                  _uploadLink'
-              firebaseT <- H.liftEffect firebaseToken
-              response <-
-                H.liftAff
-                  $ AX.request
-                      ( AX.defaultRequest
-                          { headers = []
-                          , method = Left POST
-                          , url = url <> "?key=" <> firebaseT
-                          , content =
-                            ( Just
-                                ( RequestBody.json
-                                    $ encodeJson
-                                        { dynamicLinkInfo:
-                                            -- mx@
-                                            { domainUriPrefix: "https://link.klank.dev"
-                                            , link: "https://klank.dev/?k&url=" <> _uploadLink
-                                            }
-                                        }
-                                )
-                            )
-                          , responseFormat = AXRF.json
-                          }
-                      )
-              either
-                ( const do
-                    _ <-
-                      H.query
-                        _xterm
-                        Terminal
-                        $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
-                    pure unit
-                )
-                ( \{ status: (StatusCode sc), body } -> do
-                    let
-                      body' = toObject body
-                    maybe (pure unit)
-                      ( \body'' -> do
-                          let
-                            link_ = getField body'' "shortLink"
-                          maybe
-                            ( do
-                                _ <-
-                                  H.query
-                                    _xterm
-                                    Terminal
-                                    $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, we couldn't create a link. Please try again later.\r\n$ ")
-                                pure unit
-                            )
-                            ( \res -> do
-                                H.modify_ (_ { linkModalUrl = res, linkModalOpen = true })
-                                _ <-
-                                  H.query
-                                    _xterm
-                                    Terminal
-                                    $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
-                                pure unit
-                            )
-                            ((either (const Nothing) Just link_) >>= \x -> if (sc >= 400) then Nothing else Just x)
-                      )
-                      body'
-                )
-                response
-              pure unit
-          )
-          txt_
+      Right CLI.Link -> makeLink false
+      Right CLI.FileLink -> makeLink true
     pure unit
