@@ -25,19 +25,24 @@ app.post("/u", bodyParser.json(), function (req, res) {
   if (!req.body.code) {
     throw new Error("Need a code param");
   }
-  if (
-    (req.body.code.indexOf("module") < 0 ||
-      req.body.code.indexOf("main") < 0 ||
-      req.body.code.indexOf("runInBrowser") < 0) &&
-    (req.body.code.indexOf("AudioWorkletProcessor") < 0 ||
-      req.body.code.indexOf("process") < 0 ||
-      req.body.code.indexOf("registerProcessor") < 0)
-  ) {
+  var notPurs =
+    req.body.code.indexOf("module") < 0 ||
+    req.body.code.indexOf("main") < 0 ||
+    req.body.code.indexOf("runInBrowser") < 0;
+  var notJs =
+    req.body.code.indexOf("AudioWorkletProcessor") < 0 ||
+    req.body.code.indexOf("process") < 0 ||
+    req.body.code.indexOf("registerProcessor") < 0;
+  if (notPurs && notJs) {
     throw new Error("invalid input");
   }
   var stream = Buffer.from(req.body.code, "binary");
   var o =
-    new Date().getTime() + "" + Math.floor(Math.random() * 10000) + ".purs";
+    "K" +
+    new Date().getTime() +
+    "" +
+    Math.floor(Math.random() * 10000) +
+    (notPurs ? ".js" : ".purs");
   var params = {
     ACL: "public-read",
     Bucket: "klank-share",
