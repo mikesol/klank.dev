@@ -5,10 +5,11 @@ var helmet = require("helmet");
 var cors = require("cors");
 var app = express();
 var fs = require("fs");
-var libcurl = require("node-libcurl");
-var Curl = libcurl.Curl;
+var AWS = require("aws-sdk");
 app.use(cors());
 app.use(helmet());
+var s3 = new AWS.S3();
+
 app.post("/", bodyParser.json(), function (req, res) {
   if (!req.body.code) {
     throw new Error("Need a code param");
@@ -20,33 +21,34 @@ app.post("/", bodyParser.json(), function (req, res) {
   })();
 });
 
-app.post("/0x0", bodyParser.json(), function (req, res) {
+app.post("/u", bodyParser.json(), function (req, res) {
   if (!req.body.code) {
     throw new Error("Need a code param");
   }
-  var fn =
-    new Date().getTime() + "" + Math.floor(Math.random() * 1000) + ".txt";
-  fs.writeFileSync(fn, req.body.code);
-  const curl = new Curl();
-  const close = curl.close.bind(curl);
-
-  curl.setOpt(Curl.option.URL, "http://0x0.st");
-  curl.setOpt(Curl.option.HTTPPOST, [
-    { name: "file", file: fn, type: "text/plain" },
-  ]);
-
-  curl.on("end", function (s, d) {
-    console.log("received result", s, d, "end of transmission");
-    res.send(d.split("\n")[0]);
-    fs.unlinkSync(fn);
-    close();
+  if (
+    req.body.code.indexOf("module") < 0 ||
+    req.body.code.indexOf("main") < 0 ||
+    req.body.code.indexOf("runInBrowser") < 0
+  ) {
+    throw new Error("invalid input");
+  }
+  var stream = Buffer.from(req.body.code, "binary");
+  var o =
+    new Date().getTime() + "" + Math.floor(Math.random() * 10000) + ".purs";
+  var params = {
+    ACL: "public-read",
+    Bucket: "klank-share",
+    Key: o,
+    Body: stream,
+  };
+  s3.upload(params, function (err, data) {
+    if (err) {
+      console.log(err);
+      res.status(400).send("Server error");
+    } else {
+      res.send(data.Location);
+    }
   });
-  curl.on("error", function () {
-    res.status(400).send();
-    fs.unlinkSync(fn);
-    close();
-  });
-  curl.perform();
 });
 
 app.listen(process.env.PORT || 3000, () => {

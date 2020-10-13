@@ -185,7 +185,7 @@ component =
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
-          , loadingModalOpen: false
+          , loadingModalOpen: true
           , linkModalOpen: false
           , showTerminal: true
           , linkModalUrl: ""
@@ -361,19 +361,18 @@ handleAction = case _ of
           H.modify_
             ( _
                 { showTerminal = false
-                , loadingModalOpen = true
                 , mainDisplay = CanvasDisplay
                 }
             )
           compile
           H.modify_
             ( _
-                { loadingModalOpen = false
-                , playModalOpen = true
+                { playModalOpen = true
                 }
             )
           H.liftEffect canvasDimensionHack
       )
+    H.modify_ (_ { loadingModalOpen = false })
     pure mempty
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
@@ -562,13 +561,13 @@ handleTerminalOutput = case _ of
                   $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link...")
               -- mx@
               surl <- H.liftEffect serverUrl
-              _0x0' <-
+              _uploadLink' <-
                 H.liftAff
                   $ AX.request
                       ( AX.defaultRequest
                           { headers = []
                           , method = Left POST
-                          , url = (surl <> "/0x0")
+                          , url = (surl <> "/u")
                           , content =
                             ( Just
                                 ( RequestBody.json
@@ -579,7 +578,7 @@ handleTerminalOutput = case _ of
                           , responseFormat = AXRF.string
                           }
                       )
-              _0x0 <-
+              _uploadLink <-
                 either
                   ( \_ -> do
                       _ <-
@@ -591,7 +590,7 @@ handleTerminalOutput = case _ of
                       H.liftEffect $ throw "Could not process sound."
                   )
                   (pure <<< _.body)
-                  _0x0'
+                  _uploadLink'
               firebaseT <- H.liftEffect firebaseToken
               response <-
                 H.liftAff
@@ -607,7 +606,7 @@ handleTerminalOutput = case _ of
                                         { dynamicLinkInfo:
                                             -- mx@
                                             { domainUriPrefix: "https://link.klank.dev"
-                                            , link: "https://klank.dev/?k&url=" <> _0x0
+                                            , link: "https://klank.dev/?k&url=" <> _uploadLink
                                             }
                                         }
                                 )

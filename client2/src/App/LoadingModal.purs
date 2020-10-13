@@ -29,7 +29,7 @@ loading { open } =
                     ]
                     [ HH.text "You've found klank.dev! 🎤🎧🔊" ]
                 ]
-            , HH.p [] [ HH.text "Loading... Awesomeness is imminent! ⏳" ]
+            , HH.p [] [ HH.text "Loading... be right with you... ⏳" ]
             ]
         ]
     ]
