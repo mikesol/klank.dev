@@ -567,7 +567,7 @@ handleTerminalOutput = case _ of
                       ( AX.defaultRequest
                           { headers = []
                           , method = Left POST
-                          , url = (surl <> "/u")
+                          , url = (surl <> "u")
                           , content =
                             ( Just
                                 ( RequestBody.json
