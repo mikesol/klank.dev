@@ -7,6 +7,7 @@ import Ace.Editor as Editor
 import Affjax as AX
 import Affjax.RequestBody as RequestBody
 import Affjax.ResponseFormat as AXRF
+import Affjax.StatusCode (StatusCode(..))
 import App.AceComponent as AceComponent
 import App.AppAction (Action(..))
 import App.CLI as CLI
@@ -623,23 +624,21 @@ handleTerminalOutput = case _ of
                         $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
                     pure unit
                 )
-                ( \{ body } -> do
+                ( \{ status: (StatusCode sc), body } -> do
                     let
                       body' = toObject body
                     maybe (pure unit)
                       ( \body'' -> do
                           let
                             link_ = getField body'' "shortLink"
-                          either
-                            ( const
-                                ( do
-                                    _ <-
-                                      H.query
-                                        _xterm
-                                        Terminal
-                                        $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, we couldn't create a link. Please try again later.\r\n$ ")
-                                    pure unit
-                                )
+                          maybe
+                            ( do
+                                _ <-
+                                  H.query
+                                    _xterm
+                                    Terminal
+                                    $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, we couldn't create a link. Please try again later.\r\n$ ")
+                                pure unit
                             )
                             ( \res -> do
                                 H.modify_ (_ { linkModalUrl = res, linkModalOpen = true })
@@ -650,7 +649,7 @@ handleTerminalOutput = case _ of
                                     $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
                                 pure unit
                             )
-                            link_
+                            ((either (const Nothing) Just link_) >>= \x -> if (sc >= 400) then Nothing else Just x)
                       )
                       body'
                 )
