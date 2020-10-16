@@ -114,7 +114,7 @@ compiler { body } =
             $ writeTextFile
                 UTF8
                 ("deps/" <> uuid <> "/index_.js")
-                ("window.klank = require(\"../output/" <> renamed.moduleName <> "/\")")
+                ("window.klank = require(\"../output/" <> renamed.moduleName <> "/\").main")
         _ <-
           liftEffect
             $ writeTextFile
