@@ -36,7 +36,7 @@ import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, throw)
-import FRP.Behavior.Audio (AudioContext, AudioInfo, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, VisualInfo, makeAudioContext, audioWorkletAddModule)
+import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, makeAudioContext, audioWorkletAddModule)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as O
@@ -46,6 +46,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Text.Parsing.Parser (runParser)
+import Type.Klank.Dev (Klank')
 
 foreign import data BrowserMicrophone :: Type
 
@@ -79,23 +80,7 @@ foreign import canvasOrBust :: Effect CanvasElement
 
 foreign import getKlank ::
   forall accumulator.
-  Effect
-    { enableMicrophone :: Boolean
-    , accumulator :: (accumulator -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , worklets :: (Array String) -> (Array String -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , tracks :: (Object BrowserAudioTrack) -> (Object BrowserAudioTrack -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , buffers :: AudioContext -> (Object BrowserAudioBuffer) -> (Object BrowserAudioBuffer -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , floatArrays :: (Object BrowserFloatArray) -> (Object BrowserFloatArray -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , periodicWaves :: AudioContext -> (Object BrowserPeriodicWave) -> (Object BrowserPeriodicWave -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit
-    , main ::
-        accumulator ->
-        Int ->
-        Int ->
-        AudioContext ->
-        AudioInfo (Object BrowserMicrophone) (Object BrowserAudioTrack) (Object BrowserAudioBuffer) (Object BrowserFloatArray) (Object BrowserPeriodicWave) ->
-        VisualInfo ->
-        Effect (Effect Unit)
-    }
+  Effect (Klank' accumulator)
 
 _ace = SProxy :: SProxy "ace"
 
@@ -449,6 +434,7 @@ compile = do
                           )
                       )
                       ( \res -> do
+                          -- H.liftEffect $ log res
                           H.liftEffect $ completelyUnsafeEval res
                           _ <-
                             H.query
@@ -508,7 +494,7 @@ playKlank = do
   H.modify_ (_ { periodicWaves = periodicWaves })
   turnMeOff <-
     H.liftEffect
-      ( klank.main
+      ( klank.run
           accumulator
           20
           15

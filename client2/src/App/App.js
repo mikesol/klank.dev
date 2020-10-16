@@ -92,50 +92,7 @@ exports.loadCustomAudioNodes = function (audioCtx) {
     return audioCtx.audioWorklet.addModule(process.env.AUDIO_MUL_URL);
   };
 };
-var cbHack = function () {
-  return function (res) {
-    return function (rej) {
-      return res({});
-    };
-  };
-};
-var cbAHack = function () {
-  return function (res) {
-    return function (rej) {
-      return res([]);
-    };
-  };
-};
 exports.getKlank = function () {
-  if (!window.klank.enableMicrophone) {
-    window.klank.enableMicrophone = false;
-  }
-  if (!window.klank.accumulator) {
-    window.klank.accumulator = function (res) {
-      return function (rej) {
-        return res([]);
-      };
-    };
-  }
-  if (!window.klank.tracks) {
-    window.klank.tracks = cbHack;
-  }
-  if (!window.klank.buffers) {
-    window.klank.buffers = function () {
-      return cbHack;
-    };
-  }
-  if (!window.klank.worklets) {
-    window.klank.worklets = cbAHack;
-  }
-  if (!window.klank.floatArrays) {
-    window.klank.floatArrays = cbHack;
-  }
-  if (!window.klank.periodicWaves) {
-    window.klank.periodicWaves = function () {
-      return cbHack;
-    };
-  }
   return window.klank;
 };
 

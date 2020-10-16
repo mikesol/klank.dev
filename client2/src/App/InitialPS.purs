@@ -35,24 +35,17 @@ initialPS =
 -- • https://github.com/paf31/purescript-behaviors
 -- • https://github.com/mikesol/purescript-audio-behaviors
 import Prelude
-import Data.List ((:), List(..))
-import Data.NonEmpty ((:|))
 import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker)
-import Math (pi, sin)
+import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker')
+import Type.Klank.Dev (Klank, klank)
 
 scene :: Number -> Behavior (AudioUnit D1)
-scene time = let
-      rad = pi * time
-    in
-      pure $ speaker
-         ( (gain' 0.1 $ sinOsc (440.0 + (10.0 * sin (2.3 * rad))))
-              :| (gain' 0.25 $ sinOsc (235.0 + (10.0 * sin (1.7 * rad))))
-              : (gain' 0.2 $ sinOsc (337.0 + (10.0 * sin rad)))
-              : (gain' 0.1 $ sinOsc (530.0 + (19.0 * (5.0 * sin rad))))
-              : Nil
-          )
+scene _ = pure (speaker' (gain' 0.2 (sinOsc 440.0)))
 
-main = runInBrowser scene""" ::
+main :: Klank
+main =
+  klank
+    { run = runInBrowser scene
+    }""" ::
     String
