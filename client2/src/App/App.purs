@@ -35,6 +35,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
+-- import Effect.Class.Console (log)
 import Effect.Exception (Error, throw)
 import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, makeAudioContext, audioWorkletAddModule)
 import Foreign (Foreign)
@@ -46,7 +47,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Text.Parsing.Parser (runParser)
-import Type.Klank.Dev (Klank')
+import Type.Klank.Dev (Klank'')
 
 foreign import data BrowserMicrophone :: Type
 
@@ -79,8 +80,8 @@ foreign import completelyUnsafeEval :: String -> Effect Unit
 foreign import canvasOrBust :: Effect CanvasElement
 
 foreign import getKlank ::
-  forall accumulator.
-  Effect (Klank' accumulator)
+  forall accumulator env.
+  Effect (Klank'' accumulator env)
 
 _ace = SProxy :: SProxy "ace"
 
@@ -501,6 +502,7 @@ playKlank = do
           ctx
           { microphones, tracks, buffers, floatArrays, periodicWaves }
           { canvases: O.singleton "canvas" canvasOrBust }
+          klank.exporter
       )
   H.modify_ (_ { stopFn = Just turnMeOff })
   _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
