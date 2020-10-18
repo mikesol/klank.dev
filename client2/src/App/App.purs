@@ -497,9 +497,8 @@ playKlank = do
     H.liftEffect
       ( klank.run
           accumulator
-          20
-          15
           ctx
+          klank.engineInfo
           { microphones, tracks, buffers, floatArrays, periodicWaves }
           { canvases: O.singleton "canvas" canvasOrBust }
           klank.exporter
