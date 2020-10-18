@@ -304,6 +304,7 @@ handleAction = case _ of
                 , mainDisplay = CanvasDisplay
                 }
             )
+          H.liftEffect canvasDimensionHack
       )
     initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
     when ec
@@ -365,7 +366,6 @@ handleAction = case _ of
                 , loadingModalOpen = false
                 }
             )
-          H.liftEffect canvasDimensionHack
       )
     else
       H.modify_ (_ { loadingModalOpen = false })
