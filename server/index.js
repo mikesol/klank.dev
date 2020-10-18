@@ -3,17 +3,22 @@ var bodyParser = require("body-parser");
 var ps = require("./output/Main/");
 var helmet = require("helmet");
 var cors = require("cors");
-var app = express();
-var fs = require("fs");
 var AWS = require("aws-sdk");
+var Mixpanel = require("mixpanel");
+
+var app = express();
 app.use(cors());
 app.use(helmet());
 var s3 = new AWS.S3();
+var mixpanel = Mixpanel.init("88b2855ebbc656315bace43f141d7f3f", {
+  host: "api-eu.mixpanel.com",
+});
 
 app.post("/", bodyParser.json(), function (req, res) {
   if (!req.body.code) {
     throw new Error("Need a code param");
   }
+  mixpanel.track("Klank compiled");
   ps.compile(req)(function (r) {
     return function () {
       res.json(JSON.parse(r));
@@ -36,6 +41,7 @@ app.post("/u", bodyParser.json(), function (req, res) {
   if (notPurs && notJs) {
     throw new Error("invalid input");
   }
+  mixpanel.track(notJs ? "Klank saved" : "Processor saved");
   var stream = Buffer.from(req.body.code, "binary");
   var o =
     "K" +
