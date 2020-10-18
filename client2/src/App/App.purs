@@ -296,6 +296,15 @@ handleAction = case _ of
     c <- H.liftEffect $ getC
     ec <- H.liftEffect $ getEC
     noterm <- H.liftEffect $ getNoterm
+    when noterm
+      ( do
+          H.modify_
+            ( _
+                { showTerminal = false
+                , mainDisplay = CanvasDisplay
+                }
+            )
+      )
     initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
     when ec
       ( do
@@ -345,26 +354,21 @@ handleAction = case _ of
         )
     -- make it compile everything for now as first klank is not up to date
     -- too lazy to fix, fix at some point
-    case (k || true) of
+    case (k || noterm || true) of
       true -> compile
       false -> pure unit
-    when noterm
+    if noterm then
       ( do
           H.modify_
             ( _
-                { showTerminal = false
-                , mainDisplay = CanvasDisplay
-                }
-            )
-          compile
-          H.modify_
-            ( _
                 { playModalOpen = true
+                , loadingModalOpen = false
                 }
             )
           H.liftEffect canvasDimensionHack
       )
-    H.modify_ (_ { loadingModalOpen = false })
+    else
+      H.modify_ (_ { loadingModalOpen = false })
     pure mempty
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
