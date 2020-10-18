@@ -10,7 +10,7 @@ var app = express();
 app.use(cors());
 app.use(helmet());
 var s3 = new AWS.S3();
-var mixpanel = Mixpanel.init("88b2855ebbc656315bace43f141d7f3f", {
+var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
   host: "api-eu.mixpanel.com",
 });
 
