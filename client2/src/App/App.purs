@@ -343,7 +343,9 @@ handleAction = case _ of
             _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
             pure unit
         )
-    case k of
+    -- make it compile everything for now as first klank is not up to date
+    -- too lazy to fix, fix at some point
+    case (k || true) of
       true -> compile
       false -> pure unit
     when noterm
