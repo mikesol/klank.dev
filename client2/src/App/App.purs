@@ -512,8 +512,8 @@ playKlank = do
   pure unit
 
 -- todo - avoid Firebase call for extra link
-makeLink :: ∀ m t723 t724. MonadEffect m ⇒ MonadAff m ⇒ Boolean -> H.HalogenM State t724 ChildSlots t723 m Unit
-makeLink justLink = do
+makeLink :: ∀ m t723 t724. MonadEffect m ⇒ MonadAff m ⇒ Boolean -> Boolean -> H.HalogenM State t724 ChildSlots t723 m Unit
+makeLink noTerm justLink = do
   url <- H.liftEffect firebaseUrl
   txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
   maybe
@@ -579,7 +579,7 @@ makeLink justLink = do
                                   { dynamicLinkInfo:
                                       -- mx@
                                       { domainUriPrefix: "https://link.klank.dev"
-                                      , link: "https://klank.dev/?k&url=" <> _uploadLink
+                                      , link: "https://klank.dev/?" <> (if noTerm then "noterm" else "k") <> "&url=" <> _uploadLink
                                       }
                                   }
                           )
@@ -660,6 +660,7 @@ handleTerminalOutput = case _ of
         _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
         stopper
       Right CLI.Compile -> compile
-      Right CLI.Link -> makeLink false
-      Right CLI.FileLink -> makeLink true
+      Right CLI.LinkNoTerm -> makeLink true false
+      Right CLI.Link -> makeLink false false
+      Right CLI.FileLink -> makeLink false true
     pure unit
