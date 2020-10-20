@@ -13,6 +13,7 @@ import App.AppAction (Action(..))
 import App.CLI as CLI
 import App.CanvasComponent as CanvasComponent
 import App.ClickPlayModal (clickPlay)
+import App.DropzoneComponent as DropzoneComponent
 import App.InitialPS (helpMsg, initialPS, welcomeMsg)
 import App.LinkModal (modal)
 import App.LoadingModal (loading)
@@ -35,9 +36,8 @@ import Effect (Effect)
 import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
--- import Effect.Class.Console (log)
 import Effect.Exception (Error, throw)
-import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, makeAudioContext, audioWorkletAddModule)
+import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, audioWorkletAddModule, makeAudioContext)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as O
@@ -48,6 +48,8 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
+import Web.File.File (File)
+import Web.File.File as WF
 
 foreign import data BrowserMicrophone :: Type
 
@@ -83,16 +85,21 @@ foreign import getKlank ::
   forall accumulator env.
   Effect (Klank'' accumulator env)
 
+foreign import bufferFromFile :: AudioContext -> File -> Effect (Promise BrowserAudioBuffer)
+
 _ace = SProxy :: SProxy "ace"
 
 _xterm = SProxy :: SProxy "xterm"
 
 _canvas = SProxy :: SProxy "canvas"
 
+_upload = SProxy :: SProxy "upload"
+
 data MainDisplay
   = EditorDisplay
   | CanvasDisplay
   | SplitDisplay
+  | UploadDisplay
 
 type State
   = { editorText :: String
@@ -152,10 +159,24 @@ instance showWhichCanvas :: Show WhichCanvas where
 instance ordWhichCanvas :: Ord WhichCanvas where
   compare a b = compare (show a) (show b)
 
+data WhichUploader
+  = Uploader
+
+derive instance genericWhichUploader :: Generic WhichUploader _
+
+derive instance eqWhichUploader :: Eq WhichUploader
+
+instance showWhichUploader :: Show WhichUploader where
+  show = genericShow
+
+instance ordWhichUploader :: Ord WhichUploader where
+  compare a b = compare (show a) (show b)
+
 type ChildSlots
   = ( ace :: AceComponent.Slot WhichAce
     , xterm :: XTermComponent.Slot WhichTerm
     , canvas :: CanvasComponent.Slot WhichCanvas
+    , upload :: forall query. DropzoneComponent.Slot query WhichUploader
     )
 
 affable :: forall a. ((a -> Effect Unit) -> (Error -> Effect Unit) -> Effect Unit) -> Aff a
@@ -232,6 +253,11 @@ render { editorText
         ( join
             [ [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
                   EditorDisplay -> [ editorDisplay editorText ]
+                  UploadDisplay ->
+                    [ HH.slot _upload Uploader DropzoneComponent.component
+                        {}
+                        (Just <<< HandleFileDrop)
+                    ]
                   CanvasDisplay ->
                     [ HH.slot _canvas Canvas CanvasComponent.component
                         {}
@@ -370,10 +396,19 @@ handleAction = case _ of
     pure mempty
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
+  HandleFileDrop msg -> handleUploaderOutput msg
 
 handleAceOuput :: forall o m. MonadAff m => AceComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
 handleAceOuput = case _ of
   AceComponent.TextChanged editorText -> H.modify_ (_ { editorText = editorText })
+
+handleUploaderOutput :: forall o m. MonadAff m => DropzoneComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
+handleUploaderOutput = case _ of
+  DropzoneComponent.FileDropped file -> do
+    buffers <- H.gets _.buffers
+    ctx <- H.liftEffect makeAudioContext
+    newBuffer <- H.liftAff $ toAffE (bufferFromFile ctx file)
+    H.modify_ (_ { buffers = O.union (O.singleton (WF.name file) newBuffer) buffers })
 
 stopper :: ∀ t1 t8. Bind t1 ⇒ MonadState { stopFn :: Maybe (Effect Unit), audioCtx :: Maybe AudioContext | t8 } t1 ⇒ MonadEffect t1 ⇒ t1 Unit
 stopper = do
@@ -460,6 +495,7 @@ compile = do
 playKlank :: ∀ t338 t341 m t346 t347. MonadEffect m ⇒ MonadAff m ⇒ H.HalogenM State t347 ( xterm ∷ H.Slot XTermComponent.Query t341 WhichTerm | t338 ) t346 m Unit
 playKlank = do
   stopper
+  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nRetrieving assets...")
   klank <- H.liftEffect getKlank
   ctx <- H.liftEffect makeAudioContext
   H.modify_ (_ { audioCtx = Just ctx })
@@ -508,7 +544,7 @@ playKlank = do
           klank.exporter
       )
   H.modify_ (_ { stopFn = Just turnMeOff })
-  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
+  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
   pure unit
 
 -- todo - avoid Firebase call for extra link
@@ -647,6 +683,9 @@ handleTerminalOutput = case _ of
       Right CLI.Editor -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = EditorDisplay })
+      Right CLI.Upload -> do
+        void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
+        H.modify_ (_ { mainDisplay = UploadDisplay })
       Right CLI.EditorCanvas -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = SplitDisplay })
