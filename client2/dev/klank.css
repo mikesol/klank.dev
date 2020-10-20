@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 .ace_editor {
-	z-index: 0;
-	isolation: isolate;
+  z-index: 0;
+  isolation: isolate;
+}
+/* ewwww */
+.dz-progress {
+  /* progress bar covers file name */
+  display: none !important;
 }

@@ -104,6 +104,23 @@ exports.canvasOrBust = function () {
   return cvs;
 };
 
+exports.bufferFromFile = function (ctx) {
+  return function (f) {
+    return function () {
+      var r = new FileReader();
+      return new Promise(function (resolve, reject) {
+        r.onload = function () {
+          resolve(ctx.decodeAudioData(r.result));
+        };
+        r.onerror = function (e) {
+          reject(e);
+        };
+        r.readAsArrayBuffer(f);
+      });
+    };
+  };
+};
+
 exports.getMicrophoneImpl = function () {
   return navigator.mediaDevices.getUserMedia({ audio: true });
 };
