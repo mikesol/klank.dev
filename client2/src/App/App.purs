@@ -460,6 +460,7 @@ compile = do
 playKlank :: ∀ t338 t341 m t346 t347. MonadEffect m ⇒ MonadAff m ⇒ H.HalogenM State t347 ( xterm ∷ H.Slot XTermComponent.Query t341 WhichTerm | t338 ) t346 m Unit
 playKlank = do
   stopper
+  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nRetrieving assets...")
   klank <- H.liftEffect getKlank
   ctx <- H.liftEffect makeAudioContext
   H.modify_ (_ { audioCtx = Just ctx })
@@ -508,7 +509,7 @@ playKlank = do
           klank.exporter
       )
   H.modify_ (_ { stopFn = Just turnMeOff })
-  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
+  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
   pure unit
 
 -- todo - avoid Firebase call for extra link
