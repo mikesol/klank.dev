@@ -4,7 +4,7 @@ import Prelude
 import App.Chalk (CColor(..), chalk, defaultChalk)
 import Data.Maybe (Maybe(..))
 
-helpMsg = ("> help (h)    | This help message. More help @ https://discourse.klank.dev\r\n> compile (k) | Compile the current scene\r\n> play (p)    | Play the current scene\r\n> stop (s)    | Stop the current scene\r\n> link (l)    | Generate a link to the current klank\r\n> lnt         | Generate a no-terminal link to the current klank\r\n> flink (fl)  | Generate a link to the current klank as a file\r\n> edit (e)    | Show the editor\r\n> split (ec)  | Show the editor and canvas\r\n> canvas (c)  | Show only the canvas") :: String
+helpMsg = ("> help (h)    | This help message. More help @ https://discourse.klank.dev\r\n> compile (k) | Compile the current scene\r\n> play (p)    | Play the current scene\r\n> stop (s)    | Stop the current scene\r\n> link (l)    | Generate a link to the current klank\r\n> lnt         | Generate a no-terminal link to the current klank\r\n> flink (fl)  | Generate a link to the current klank as a file\r\n> upload (u)  | Open the file uploader\r\n> edit (e)    | Show the editor\r\n> split (ec)  | Show the editor and canvas\r\n> canvas (c)  | Show only the canvas") :: String
 
 frontMatter =
   "Welcome to "
