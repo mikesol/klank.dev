@@ -30,6 +30,7 @@ welcomeMsg =
 
 initialPS =
   """module Klank.Dev where
+
 -- New to PureScript? Check out https://www.purescript.org/ for learning resources!
 -- To learn more about FRP and the behavior pattern, make sure to check out:
 -- • https://github.com/paf31/purescript-behaviors
@@ -37,11 +38,21 @@ initialPS =
 import Prelude
 import Data.Typelevel.Num (D1)
 import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker')
+import Data.List ((:), List(..))
+import Data.NonEmpty ((:|))
+import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker)
 import Type.Klank.Dev (Klank, klank)
+import Math (pi, sin, cos)
 
 scene :: Number -> Behavior (AudioUnit D1)
-scene _ = pure (speaker' (gain' 0.2 (sinOsc 440.0)))
+scene time =
+  pure
+    ( speaker
+        ( (gain' (0.1 + (-0.1) * cos (0.5 * pi * time)) (sinOsc 440.0))
+            :| (gain' (0.1 + 0.1 * sin (0.47 * pi * time)) (sinOsc 330.0))
+            : Nil
+        )
+    )
 
 main :: Klank
 main =
