@@ -48,11 +48,13 @@ scene :: Number -> Behavior (AudioUnit D1)
 scene time =
   pure
     ( speaker
-        ( (gain' (0.1 + (-0.1) * cos (0.5 * pi * time)) (sinOsc 440.0))
-            :| (gain' (0.1 + 0.1 * sin (0.47 * pi * time)) (sinOsc 330.0))
+        ( (gain' (0.1 + (-0.1) * cos (0.5 * rad)) (sinOsc $ 440.0 + 6.0 * (sin (0.1 * rad)) ))
+            :| (gain' (0.1 + (-0.1) * cos (0.47 * rad)) (sinOsc $ 330.0 + 4.0 * (sin (0.2 * rad))))
             : Nil
         )
     )
+  where
+  rad = pi * time
 
 main :: Klank
 main =
