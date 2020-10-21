@@ -60,7 +60,7 @@ render =
             [ HH.text "Audio file dropper" ]
         , HH.p []
             [ HH.text "You can drop your audio files below and they will be read into the current session as audio buffers. See "
-            , HH.a [ HP.href "https://discourse.klank.dev/t/working-with-local-audio-files/60" ] [ HH.text "this post" ]
+            , HH.a [ HP.classes $ map ClassName [ "no-underline", "text-orange-dark", "hover:text-orange-darker", "hover:underline" ], HP.href "https://discourse.klank.dev/t/working-with-local-audio-files/60", HP.target "_blank" ] [ HH.text "this post" ]
             , HH.text " for more information."
             ]
         , HH.p [] [ HH.text "Note that this does not upload the files to a server, just to your session. In the future, there may be a hosting option." ]
