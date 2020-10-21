@@ -405,10 +405,9 @@ handleAceOuput = case _ of
 handleUploaderOutput :: forall o m. MonadAff m => DropzoneComponent.Output -> H.HalogenM State Action ChildSlots o m Unit
 handleUploaderOutput = case _ of
   DropzoneComponent.FileDropped file -> do
-    buffers <- H.gets _.buffers
     ctx <- H.liftEffect makeAudioContext
     newBuffer <- H.liftAff $ toAffE (bufferFromFile ctx file)
-    H.modify_ (_ { buffers = O.union (O.singleton (WF.name file) newBuffer) buffers })
+    H.modify_ (\i -> i { buffers = O.union (O.singleton (WF.name file) newBuffer) i.buffers })
 
 stopper :: ∀ t1 t8. Bind t1 ⇒ MonadState { stopFn :: Maybe (Effect Unit), audioCtx :: Maybe AudioContext | t8 } t1 ⇒ MonadEffect t1 ⇒ t1 Unit
 stopper = do
