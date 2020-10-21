@@ -58,9 +58,12 @@ render =
             [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
             ]
             [ HH.text "Audio file dropper" ]
-        , HH.p [] [ HH.text "You can your audio files below and they will be read into the current session cache as a buffer. The cache is the second argument passed to `buffers` function. The key for playBuf or loopBuf will be the filename, so make sure to use unique names for each file!" ]
+        , HH.p []
+            [ HH.text "You can drop your audio files below and they will be read into the current session as audio buffers. See "
+            , HH.a [ HP.href "https://discourse.klank.dev/t/working-with-local-audio-files/60" ] [ HH.text "this post" ]
+            , HH.text " for more information."
+            ]
         , HH.p [] [ HH.text "Note that this does not upload the files to a server, just to your session. In the future, there may be a hosting option." ]
-        , HH.p [] [ HH.text "If you see your files below, that means that they have been loaded into the cache and you can flip back to the editor view with the command `e`." ]
         , HH.div
             [ HP.id_ "audiodrop"
             , HP.classes $ map ClassName [ "h-full", "w-full", "dropzone", "needsclick", "dz-clickable" ]
