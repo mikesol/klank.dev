@@ -56,6 +56,10 @@ exports.getEC = function () {
   return myParam === null || myParam === "false" ? false : true;
 };
 
+exports.isThisFirefox = function () {
+  return typeof InstallTrigger !== "undefined";
+};
+
 exports.escape = function (s) {
   return function () {
     return querystring.escape(s);

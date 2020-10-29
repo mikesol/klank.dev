@@ -107,6 +107,7 @@ type State
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
     , initialAccumulator :: Maybe Foreign
+    , isFirefox :: Boolean
     , worklets :: Array String
     , linkModalUrl :: String
     , loadingModalOpen :: Boolean
@@ -206,6 +207,7 @@ component =
           , buffers: O.empty
           , floatArrays: O.empty
           , periodicWaves: O.empty
+          , isFirefox: true
           }
     , render
     , eval:
@@ -242,6 +244,7 @@ render { editorText
 , mainDisplay
 , linkModalOpen
 , linkModalUrl
+, isFirefox
 , linkModalProperNoun
 , loadingModalOpen
 , playModalOpen
@@ -250,43 +253,54 @@ render { editorText
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
         [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
-        ( join
-            [ [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
-                  EditorDisplay -> [ editorDisplay editorText ]
-                  UploadDisplay ->
-                    [ HH.slot _upload Uploader DropzoneComponent.component
-                        {}
-                        (Just <<< HandleFileDrop)
-                    ]
-                  CanvasDisplay ->
-                    [ HH.slot _canvas Canvas CanvasComponent.component
-                        {}
-                        absurd
-                    ]
-                  SplitDisplay ->
-                    [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
-                        [ editorDisplay editorText
-                        , HH.slot _canvas Canvas CanvasComponent.component
+        ( if (not isFirefox) then
+            ( [ HH.p
+                  [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
+                  ]
+                  [ HH.text "Drats!" ]
+              , HH.p [] [ HH.text "klank.dev only works on Firefox :(" ]
+              , HH.p [] [ HH.text "Please open this link in ", HH.a [ HP.href "https://www.mozilla.org/en-US/firefox/new/" ] [ HH.text "Firefox" ], HH.text " to listen to the klank." ]
+              ]
+            )
+          else
+            ( join
+                [ [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
+                      EditorDisplay -> [ editorDisplay editorText ]
+                      UploadDisplay ->
+                        [ HH.slot _upload Uploader DropzoneComponent.component
+                            {}
+                            (Just <<< HandleFileDrop)
+                        ]
+                      CanvasDisplay ->
+                        [ HH.slot _canvas Canvas CanvasComponent.component
                             {}
                             absurd
                         ]
+                      SplitDisplay ->
+                        [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
+                            [ editorDisplay editorText
+                            , HH.slot _canvas Canvas CanvasComponent.component
+                                {}
+                                absurd
+                            ]
+                        ]
+                  ]
+                , if showTerminal then
+                    [ HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
+                        [ HH.slot _xterm Terminal XTermComponent.component
+                            { terminalStyling:
+                                \t -> do
+                                  setFontSize 20 t
+                                  writeText welcomeMsg t
+                                  focus t
+                            }
+                            (Just <<< HandleTerminalUpdate)
+                        ]
                     ]
-              ]
-            , if showTerminal then
-                [ HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
-                    [ HH.slot _xterm Terminal XTermComponent.component
-                        { terminalStyling:
-                            \t -> do
-                              setFontSize 20 t
-                              writeText welcomeMsg t
-                              focus t
-                        }
-                        (Just <<< HandleTerminalUpdate)
-                    ]
+                  else
+                    []
                 ]
-              else
-                []
-            ]
+            )
         )
     , modal
         { url: linkModalUrl, open: linkModalOpen, properNoun: linkModalProperNoun
@@ -300,6 +314,8 @@ render { editorText
     ]
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
+
+foreign import isThisFirefox :: Effect Boolean
 
 foreign import loadCustomAudioNodes :: AudioContext -> Effect (Promise Unit)
 
@@ -316,6 +332,12 @@ handleAction = case _ of
   CloseLinkModal -> do
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
+    isFF <- H.liftEffect $ isThisFirefox
+    H.modify_
+      ( _
+          { isFirefox = isFF
+          }
+      )
     b64 <- H.liftEffect $ getB64 Nothing Just
     url <- H.liftEffect $ getUrl Nothing Just
     k <- H.liftEffect $ getK
