@@ -38,6 +38,11 @@ exports.getK = function () {
   var myParam = urlParams.get("k");
   return myParam === null || myParam === "false" ? false : true;
 };
+exports.getForce = function () {
+  var urlParams = new URLSearchParams(window.location.search);
+  var myParam = urlParams.get("force");
+  return myParam === null || myParam === "false" ? false : true;
+};
 exports.getNoterm = function () {
   var urlParams = new URLSearchParams(window.location.search);
   var myParam = urlParams.get("noterm");

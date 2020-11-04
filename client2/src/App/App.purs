@@ -61,6 +61,8 @@ foreign import firebaseToken :: Effect String
 
 foreign import getK :: Effect Boolean
 
+foreign import getForce :: Effect Boolean
+
 foreign import getC :: Effect Boolean
 
 foreign import getEC :: Effect Boolean
@@ -107,7 +109,7 @@ type State
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
     , initialAccumulator :: Maybe Foreign
-    , isFirefox :: Boolean
+    , klankShouldWork :: Boolean
     , worklets :: Array String
     , linkModalUrl :: String
     , loadingModalOpen :: Boolean
@@ -207,7 +209,7 @@ component =
           , buffers: O.empty
           , floatArrays: O.empty
           , periodicWaves: O.empty
-          , isFirefox: true
+          , klankShouldWork: true
           }
     , render
     , eval:
@@ -244,7 +246,7 @@ render { editorText
 , mainDisplay
 , linkModalOpen
 , linkModalUrl
-, isFirefox
+, klankShouldWork
 , linkModalProperNoun
 , loadingModalOpen
 , playModalOpen
@@ -253,7 +255,7 @@ render { editorText
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     [ HH.div
         [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
-        ( if (not isFirefox) then
+        ( if (not klankShouldWork) then
             ( [ HH.p
                   [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
                   ]
@@ -333,9 +335,10 @@ handleAction = case _ of
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
     isFF <- H.liftEffect $ isThisFirefox
+    force <- H.liftEffect $ getForce
     H.modify_
       ( _
-          { isFirefox = isFF
+          { klankShouldWork = isFF || force
           }
       )
     b64 <- H.liftEffect $ getB64 Nothing Just
