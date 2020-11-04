@@ -2,6 +2,7 @@ module App.LoadingModal where
 
 import Prelude
 import App.AppAction (Action)
+import App.ModalUtil (modalBody, modalHeader)
 import Halogen (ClassName(..))
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
@@ -24,13 +25,11 @@ loading { open } =
             [ HH.div
                 [ HP.classes $ map ClassName [ "flex", "justify-between", "items-center", "pb-3" ]
                 ]
-                [ HH.p
-                    [ HP.classes $ map ClassName [ "text-5xl", "font-bold" ]
-                    ]
+                [ modalHeader
                     [ HH.text "You've found klank.dev! 🎤🎧🔊" ]
                 ]
-            , HH.p [ HP.classes $ map ClassName [ "text-4xl" ] ] [ HH.text "Loading..." ]
-            , HH.p [ HP.classes $ map ClassName [ "text-4xl" ] ] [ HH.text "Be right with you... ⏳" ]
+            , modalBody [ HH.text "Loading..." ]
+            , modalBody [ HH.text "Be right with you... ⏳" ]
             ]
         ]
     ]
