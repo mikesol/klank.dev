@@ -554,12 +554,13 @@ playKlank = do
   prevPeriodicWaves <- H.gets _.periodicWaves
   periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx prevPeriodicWaves)
   H.modify_ (_ { periodicWaves = periodicWaves })
+  engineInfo <- H.liftAff (affable $ klank.engineInfo)
   turnMeOff <-
     H.liftEffect
       ( klank.run
           accumulator
           ctx
-          klank.engineInfo
+          engineInfo
           { microphones, tracks, buffers, floatArrays, periodicWaves }
           { canvases: O.singleton "canvas" canvasOrBust }
           klank.exporter
