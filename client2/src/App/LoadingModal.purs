@@ -16,7 +16,7 @@ loading { open } =
         ]
         []
     , HH.div
-        [ HP.classes $ map ClassName [ "modal-container", "bg-white", "w-11/12", "md:max-w-md", "mx-auto", "rounded", "shadow-lg", "z-50", "overflow-y-auto" ]
+        [ HP.classes $ map ClassName [ "modal-container", "bg-white", "mx-auto", "rounded", "shadow-lg", "z-50", "overflow-y-auto" ]
         ]
         [ HH.div
             [ HP.classes $ map ClassName [ "modal-content", "py-4", "text-left", "px-6" ]
@@ -25,11 +25,12 @@ loading { open } =
                 [ HP.classes $ map ClassName [ "flex", "justify-between", "items-center", "pb-3" ]
                 ]
                 [ HH.p
-                    [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
+                    [ HP.classes $ map ClassName [ "text-5xl", "font-bold" ]
                     ]
                     [ HH.text "You've found klank.dev! 🎤🎧🔊" ]
                 ]
-            , HH.p [] [ HH.text "Loading... be right with you... ⏳" ]
+            , HH.p [ HP.classes $ map ClassName [ "text-4xl" ] ] [ HH.text "Loading..." ]
+            , HH.p [ HP.classes $ map ClassName [ "text-4xl" ] ] [ HH.text "Be right with you... ⏳" ]
             ]
         ]
     ]
