@@ -11,6 +11,7 @@
   , "effect"
   , "generics-rep"
   , "halogen"
+  , "halogen-storybook"
   , "parsing"
   , "psci-support"
   , "svg-parser-halogen"
