@@ -61,7 +61,7 @@ exports.getOS = function (nothing) {
                   return just(windows);
                 } else if (/Android/.test(userAgent)) {
                   return just(android);
-                } else if (!os && /Linux/.test(platform)) {
+                } else if (/Linux/.test(platform)) {
                   return just(linux);
                 }
 
