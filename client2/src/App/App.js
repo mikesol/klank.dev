@@ -33,6 +33,48 @@ exports.getInitialAccumulator = function (nothing) {
     };
   };
 };
+
+exports.getOS = function (nothing) {
+  return function (just) {
+    return function (macos) {
+      return function (ios) {
+        return function (windows) {
+          return function (android) {
+            return function (linux) {
+              return function () {
+                var userAgent = window.navigator.userAgent;
+                var platform = window.navigator.platform;
+                var macosPlatforms = [
+                  "Macintosh",
+                  "MacIntel",
+                  "MacPPC",
+                  "Mac68K",
+                ];
+                var windowsPlatforms = ["Win32", "Win64", "Windows", "WinCE"];
+                var iosPlatforms = ["iPhone", "iPad", "iPod"];
+
+                if (macosPlatforms.indexOf(platform) !== -1) {
+                  return just(macos);
+                } else if (iosPlatforms.indexOf(platform) !== -1) {
+                  return just(ios);
+                } else if (windowsPlatforms.indexOf(platform) !== -1) {
+                  return just(windows);
+                } else if (/Android/.test(userAgent)) {
+                  return just(android);
+                } else if (!os && /Linux/.test(platform)) {
+                  return just(linux);
+                }
+
+                return nothing;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+};
+
 exports.getK = function () {
   var urlParams = new URLSearchParams(window.location.search);
   var myParam = urlParams.get("k");

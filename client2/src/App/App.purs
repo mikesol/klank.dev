@@ -319,6 +319,17 @@ foreign import stopAudioContext :: AudioContext -> Effect Unit
 
 foreign import isThisFirefox :: Effect Boolean
 
+data KlankOS
+  = MacOS
+  | IOS
+  | Windows
+  | Android
+  | Linux
+
+derive instance eqKlankOS :: Eq KlankOS
+
+foreign import getOS :: Maybe KlankOS -> (KlankOS -> Maybe KlankOS) -> KlankOS -> KlankOS -> KlankOS -> KlankOS -> KlankOS -> Effect (Maybe KlankOS)
+
 foreign import loadCustomAudioNodes :: AudioContext -> Effect (Promise Unit)
 
 foreign import getMicrophoneImpl :: Effect (Promise BrowserMicrophone)
@@ -335,10 +346,11 @@ handleAction = case _ of
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
     isFF <- H.liftEffect $ isThisFirefox
+    os <- H.liftEffect $ getOS Nothing Just MacOS IOS Windows Android Linux
     force <- H.liftEffect $ getForce
     H.modify_
       ( _
-          { klankShouldWork = isFF || force
+          { klankShouldWork = (not (not isFF && os == (Just Linux))) || force
           }
       )
     b64 <- H.liftEffect $ getB64 Nothing Just
