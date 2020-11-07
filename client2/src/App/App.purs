@@ -9,6 +9,7 @@ import Affjax.RequestBody as RequestBody
 import Affjax.ResponseFormat as AXRF
 import Affjax.StatusCode (StatusCode(..))
 import App.AceComponent as AceComponent
+import Halogen.HTML.Events as HE
 import App.AppAction (Action(..))
 import App.CLI as CLI
 import App.CanvasComponent as CanvasComponent
@@ -105,6 +106,7 @@ data MainDisplay
 
 type State
   = { editorText :: String
+    , isPlaying :: Boolean
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
@@ -194,6 +196,7 @@ component =
     { initialState:
         \_ ->
           { editorText: initialPS
+          , isPlaying: false
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
@@ -251,69 +254,79 @@ render { editorText
 , loadingModalOpen
 , playModalOpen
 , showTerminal
+, isPlaying
 } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
-    [ HH.div
-        [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
-        ( if (not klankShouldWork) then
-            ( [ HH.p
-                  [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
-                  ]
-                  [ HH.text "Drats!" ]
-              , HH.p [] [ HH.text "klank.dev only works on Firefox :(" ]
-              , HH.p [] [ HH.text "Please open this link in ", HH.a [ HP.href "https://www.mozilla.org/en-US/firefox/new/" ] [ HH.text "Firefox" ], HH.text " to listen to the klank." ]
-              ]
-            )
-          else
-            ( join
-                [ [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
-                      EditorDisplay -> [ editorDisplay editorText ]
-                      UploadDisplay ->
-                        [ HH.slot _upload Uploader DropzoneComponent.component
-                            {}
-                            (Just <<< HandleFileDrop)
-                        ]
-                      CanvasDisplay ->
-                        [ HH.slot _canvas Canvas CanvasComponent.component
-                            {}
-                            absurd
-                        ]
-                      SplitDisplay ->
-                        [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
-                            [ editorDisplay editorText
-                            , HH.slot _canvas Canvas CanvasComponent.component
-                                {}
-                                absurd
-                            ]
-                        ]
-                  ]
-                , if showTerminal then
-                    [ HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
-                        [ HH.slot _xterm Terminal XTermComponent.component
-                            { terminalStyling:
-                                \t -> do
-                                  setFontSize 20 t
-                                  writeText welcomeMsg t
-                                  focus t
-                            }
-                            (Just <<< HandleTerminalUpdate)
-                        ]
+    ( [ HH.div
+          [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
+          ( if (not klankShouldWork) then
+              ( [ HH.p
+                    [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
                     ]
-                  else
-                    []
+                    [ HH.text "Drats!" ]
+                , HH.p [] [ HH.text "klank.dev only works on Firefox :(" ]
+                , HH.p [] [ HH.text "Please open this link in ", HH.a [ HP.href "https://www.mozilla.org/en-US/firefox/new/" ] [ HH.text "Firefox" ], HH.text " to listen to the klank." ]
                 ]
-            )
-        )
-    , modal
-        { url: linkModalUrl, open: linkModalOpen, properNoun: linkModalProperNoun
-        }
-    , clickPlay
-        { open: playModalOpen
-        }
-    , loading
-        { open: loadingModalOpen
-        }
-    ]
+              )
+            else
+              ( join
+                  [ [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
+                        EditorDisplay -> [ editorDisplay editorText ]
+                        UploadDisplay ->
+                          [ HH.slot _upload Uploader DropzoneComponent.component
+                              {}
+                              (Just <<< HandleFileDrop)
+                          ]
+                        CanvasDisplay ->
+                          [ HH.slot _canvas Canvas CanvasComponent.component
+                              {}
+                              absurd
+                          ]
+                        SplitDisplay ->
+                          [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
+                              [ editorDisplay editorText
+                              , HH.slot _canvas Canvas CanvasComponent.component
+                                  {}
+                                  absurd
+                              ]
+                          ]
+                    ]
+                  , if showTerminal then
+                      [ HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
+                          [ HH.slot _xterm Terminal XTermComponent.component
+                              { terminalStyling:
+                                  \t -> do
+                                    setFontSize 20 t
+                                    writeText welcomeMsg t
+                                    focus t
+                              }
+                              (Just <<< HandleTerminalUpdate)
+                          ]
+                      ]
+                    else
+                      []
+                  ]
+              )
+          )
+      , modal
+          { url: linkModalUrl, open: linkModalOpen, properNoun: linkModalProperNoun
+          }
+      , clickPlay
+          { open: playModalOpen
+          }
+      , loading
+          { open: loadingModalOpen
+          }
+      ]
+        <> ( if (not showTerminal && not loadingModalOpen && not playModalOpen) then
+              [ HH.div [ HP.classes $ map ClassName [ "modal", "fixed", "right-0", "bottom-0" ] ]
+                  [ HH.i [ HP.classes $ map ClassName [ "pr-8", "pb-8", "fas", "fa-9x", "cursor-pointer", "z-40", (if isPlaying then "fa-stop-circle" else "fa-play-circle") ], HE.onClick \_ -> Just (if isPlaying then PlayKlankFromStopButton else PlayKlankFromPlayButton) ] []
+                  ]
+              ]
+            else
+              []
+          )
+    )
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
 
@@ -342,6 +355,11 @@ handleAction = case _ of
   PlayKlankFromModal -> do
     H.modify_ (_ { playModalOpen = false })
     playKlank
+  PlayKlankFromPlayButton -> do
+    playKlank
+  PlayKlankFromStopButton -> do
+    stopper
+    H.modify_ (_ { isPlaying = false })
   CloseLinkModal -> do
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
@@ -580,7 +598,7 @@ playKlank = do
           { canvases: O.singleton "canvas" canvasOrBust }
           klank.exporter
       )
-  H.modify_ (_ { stopFn = Just turnMeOff })
+  H.modify_ (_ { stopFn = Just turnMeOff, isPlaying = true })
   _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
   pure unit
 
@@ -735,6 +753,7 @@ handleTerminalOutput = case _ of
       Right CLI.Stop -> do
         _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
         stopper
+        H.modify_ (_ { isPlaying = false })
       Right CLI.Compile -> compile
       Right CLI.LinkNoTerm -> makeLink true false
       Right CLI.Link -> makeLink false false
