@@ -319,8 +319,10 @@ render { editorText
           }
       ]
         <> ( if (not showTerminal && not loadingModalOpen && not playModalOpen) then
-              [ HH.div [ HP.classes $ map ClassName [ "modal", "fixed", "right-0", "bottom-0" ] ]
-                  [ HH.i [ HP.classes $ map ClassName [ "pr-8", "pb-8", "fas", "fa-9x", "cursor-pointer", "z-40", (if isPlaying then "fa-stop-circle" else "fa-play-circle") ], HE.onClick \_ -> Just (if isPlaying then PlayKlankFromStopButton else PlayKlankFromPlayButton) ] []
+              [ HH.div [ HP.classes $ map ClassName [ "modal", "fixed", "pr-8", "pb-8", "right-0", "bottom-0" ] ]
+                  [ HH.div [ HP.classes $ map ClassName [ "bg-white", "rounded-full" ] ]
+                      [ HH.i [ HP.classes $ map ClassName [ "fas", "fa-9x", "cursor-pointer", "z-40", (if isPlaying then "fa-stop-circle" else "fa-play-circle") ], HE.onClick \_ -> Just (if isPlaying then PlayKlankFromStopButton else PlayKlankFromPlayButton) ] []
+                      ]
                   ]
               ]
             else
