@@ -9,7 +9,6 @@ import Affjax.RequestBody as RequestBody
 import Affjax.ResponseFormat as AXRF
 import Affjax.StatusCode (StatusCode(..))
 import App.AceComponent as AceComponent
-import Halogen.HTML.Events as HE
 import App.AppAction (Action(..))
 import App.CLI as CLI
 import App.CanvasComponent as CanvasComponent
@@ -46,6 +45,7 @@ import Graphics.Canvas (CanvasElement)
 import Halogen (ClassName(..))
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
@@ -106,7 +106,7 @@ data MainDisplay
 
 type State
   = { editorText :: String
-    , isPlaying :: Boolean
+    , isPlaying :: Maybe Boolean
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
@@ -196,7 +196,7 @@ component =
     { initialState:
         \_ ->
           { editorText: initialPS
-          , isPlaying: false
+          , isPlaying: Nothing
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
@@ -319,12 +319,17 @@ render { editorText
           }
       ]
         <> ( if (not showTerminal && not loadingModalOpen && not playModalOpen) then
-              [ HH.div [ HP.classes $ map ClassName [ "modal", "fixed", "pr-8", "pb-8", "right-0", "bottom-0" ] ]
-                  [ HH.div [ HP.classes $ map ClassName [ "bg-white", "rounded-full" ] ]
-                      [ HH.i [ HP.classes $ map ClassName [ "fas", "fa-9x", "cursor-pointer", "z-40", (if isPlaying then "fa-stop-circle" else "fa-play-circle") ], HE.onClick \_ -> Just (if isPlaying then PlayKlankFromStopButton else PlayKlankFromPlayButton) ] []
+              ( maybe []
+                  ( \ip ->
+                      [ HH.div [ HP.classes $ map ClassName [ "modal", "fixed", "pr-8", "pb-8", "right-0", "bottom-0" ] ]
+                          [ HH.div [ HP.classes $ map ClassName [ "bg-white", "rounded-full" ] ]
+                              [ HH.i [ HP.classes $ map ClassName [ "fas", "fa-9x", "cursor-pointer", "z-40", (if ip then "fa-stop-circle" else "fa-play-circle") ], HE.onClick \_ -> Just (if ip then PlayKlankFromStopButton else PlayKlankFromPlayButton) ] []
+                              ]
+                          ]
                       ]
-                  ]
-              ]
+                  )
+                  isPlaying
+              )
             else
               []
           )
@@ -361,7 +366,7 @@ handleAction = case _ of
     playKlank
   PlayKlankFromStopButton -> do
     stopper
-    H.modify_ (_ { isPlaying = false })
+    H.modify_ (_ { isPlaying = Just false })
   CloseLinkModal -> do
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
@@ -600,7 +605,7 @@ playKlank = do
           { canvases: O.singleton "canvas" canvasOrBust }
           klank.exporter
       )
-  H.modify_ (_ { stopFn = Just turnMeOff, isPlaying = true })
+  H.modify_ (_ { stopFn = Just turnMeOff, isPlaying = Just true })
   _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
   pure unit
 
@@ -755,7 +760,7 @@ handleTerminalOutput = case _ of
       Right CLI.Stop -> do
         _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
         stopper
-        H.modify_ (_ { isPlaying = false })
+        H.modify_ (_ { isPlaying = Just false })
       Right CLI.Compile -> compile
       Right CLI.LinkNoTerm -> makeLink true false
       Right CLI.Link -> makeLink false false
