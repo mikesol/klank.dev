@@ -270,7 +270,7 @@ render { editorText
               )
             else
               ( join
-                  [ [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] case mainDisplay of
+                  [ [ HH.div [ HP.classes $ map ClassName [ "flex", "flex-grow" ] ] case mainDisplay of
                         EditorDisplay -> [ editorDisplay editorText ]
                         UploadDisplay ->
                           [ HH.slot _upload Uploader DropzoneComponent.component
@@ -283,7 +283,7 @@ render { editorText
                               absurd
                           ]
                         SplitDisplay ->
-                          [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
+                          [ HH.div [ HP.classes $ map ClassName [ "h-full", "flex-grow", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
                               [ editorDisplay editorText
                               , HH.slot _canvas Canvas CanvasComponent.component
                                   {}
