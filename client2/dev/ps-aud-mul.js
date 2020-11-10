@@ -14,7 +14,11 @@ class PsAudMulProcessor extends AudioWorkletProcessor {
     if (inputs && inputs[0] && outputs && outputs[0]) {
       for (var i = 0; i < inputs.length; i++) {
         if (inputs[i]) {
-          for (var j = 0; j < inputs[i].length; j++) {
+          for (
+            var j = 0;
+            j < Math.min(inputs[i].length, outputs[0].length);
+            j++
+          ) {
             for (var k = 0; k < inputs[i][j].length; k++) {
               outputs[0][j][k] = outputs[0][j][k] * inputs[i][j][k];
             }
