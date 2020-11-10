@@ -53,7 +53,7 @@ type Slot query
 render :: forall m. State -> H.ComponentHTML Action () m
 render =
   const
-    $ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full" ] ]
+    $ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ]
         [ HH.p
             [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
             ]

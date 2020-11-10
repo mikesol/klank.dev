@@ -58,9 +58,11 @@ initialState = const {}
 render :: forall m. State -> H.ComponentHTML Action () m
 render =
   const
-    $ HH.canvas
-        [ HP.id_ "klank-canvas"
-        , HP.classes $ map ClassName [ "h-full", "w-full" ]
+    $ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ]
+        [ HH.canvas
+            [ HP.id_ "klank-canvas"
+            , HP.classes $ map ClassName [ "h-full", "w-full" ]
+            ]
         ]
 
 handleAction :: forall m. MonadAff m => Action -> H.HalogenM State Action () Output m Unit
