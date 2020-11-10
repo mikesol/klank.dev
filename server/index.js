@@ -52,6 +52,7 @@ app.post("/u", bodyParser.json(), function (req, res) {
   var params = {
     ACL: "public-read",
     Bucket: "klank-share",
+    ContentType: notPurs ? "application/javascript" : "text/plain",
     Key: o,
     Body: stream,
   };
