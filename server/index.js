@@ -14,17 +14,23 @@ var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
   host: "api-eu.mixpanel.com",
 });
 
-app.post("/", bodyParser.json(), function (req, res) {
-  if (!req.body.code) {
-    throw new Error("Need a code param");
+app.post(
+  "/",
+  bodyParser.json({
+    limit: "10mb",
+  }),
+  function (req, res) {
+    if (!req.body.code) {
+      throw new Error("Need a code param");
+    }
+    mixpanel.track("Klank compiled");
+    ps.compile(req)(function (r) {
+      return function () {
+        res.json(JSON.parse(r));
+      };
+    })();
   }
-  mixpanel.track("Klank compiled");
-  ps.compile(req)(function (r) {
-    return function () {
-      res.json(JSON.parse(r));
-    };
-  })();
-});
+);
 
 app.post("/u", bodyParser.json(), function (req, res) {
   if (!req.body.code) {
