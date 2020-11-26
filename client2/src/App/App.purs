@@ -37,7 +37,7 @@ import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, throw)
-import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, audioWorkletAddModule, makeAudioContext)
+import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, MediaRecorder, RecorderSignature, audioWorkletAddModule, makeAudioContext)
 import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as O
@@ -120,6 +120,7 @@ type State
     , playModalOpen :: Boolean
     , showTerminal :: Boolean
     , tracks :: Object BrowserAudioTrack
+    , recorders :: Object (RecorderSignature MediaRecorder)
     , buffers :: Object BrowserAudioBuffer
     , floatArrays :: Object BrowserFloatArray
     , periodicWaves :: Object BrowserPeriodicWave
@@ -210,6 +211,7 @@ component =
           , worklets: []
           , tracks: O.empty
           , buffers: O.empty
+          , recorders: O.empty
           , floatArrays: O.empty
           , periodicWaves: O.empty
           , klankShouldWork: true
@@ -559,7 +561,6 @@ playKlank = do
   _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nRetrieving assets...")
   klank <- H.liftEffect getKlank
   ctx <- H.liftEffect makeAudioContext
-  H.modify_ (_ { audioCtx = Just ctx })
   H.liftAff (toAffE $ loadCustomAudioNodes ctx)
   microphones <-
     if klank.enableMicrophone then
@@ -575,7 +576,6 @@ playKlank = do
     Just acc -> pure acc
   prevWorklets <- H.gets _.worklets
   worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
-  H.modify_ (_ { worklets = worklets })
   -------------
   ----- maybe it's just superstition
   ---- but i think this didn't work unless I explicitly asked for a variable `o`
@@ -584,16 +584,14 @@ playKlank = do
   o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
   prevTracks <- H.gets _.tracks
   tracks <- H.liftAff (affable $ klank.tracks prevTracks)
-  H.modify_ (_ { tracks = tracks })
   prevBuffers <- H.gets _.buffers
   buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
-  H.modify_ (_ { buffers = buffers })
+  prevRecorders <- H.gets _.recorders
+  recorders <- H.liftAff (affable $ klank.recorders O.empty (\_ _ -> pure unit) prevRecorders)
   prevFloatArrays <- H.gets _.floatArrays
   floatArrays <- H.liftAff (affable $ klank.floatArrays prevFloatArrays)
-  H.modify_ (_ { floatArrays = floatArrays })
   prevPeriodicWaves <- H.gets _.periodicWaves
   periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx prevPeriodicWaves)
-  H.modify_ (_ { periodicWaves = periodicWaves })
   engineInfo <- H.liftAff (affable $ klank.engineInfo)
   turnMeOff <-
     H.liftEffect
@@ -601,11 +599,23 @@ playKlank = do
           accumulator
           ctx
           engineInfo
-          { microphones, tracks, buffers, floatArrays, periodicWaves }
+          { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
           { canvases: O.singleton "canvas" canvasOrBust }
           klank.exporter
       )
-  H.modify_ (_ { stopFn = Just turnMeOff, isPlaying = Just true })
+  H.modify_
+    ( _
+        { stopFn = Just turnMeOff
+        , isPlaying = Just true
+        , periodicWaves = periodicWaves
+        , audioCtx = Just ctx
+        , recorders = recorders
+        , worklets = worklets
+        , tracks = tracks
+        , buffers = buffers
+        , floatArrays = floatArrays
+        }
+    )
   _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
   pure unit
 
