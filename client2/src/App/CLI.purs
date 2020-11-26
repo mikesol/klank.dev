@@ -19,6 +19,7 @@ data CLI
   | LinkNoTerm
   | Upload
   | FileLink
+  | Downloads
 
 cli ∷ ∀ s. StringLike s ⇒ Parser s CLI
 cli =
@@ -28,6 +29,7 @@ cli =
     <|> try canvas
     <|> try play
     <|> try stop
+    <|> try downloads
     <|> try linkNoTerm
     <|> try upload
     <|> try link
@@ -57,6 +59,9 @@ play = (try $ string "play" <|> string "p") *> pure Play
 
 stop ∷ ∀ s. StringLike s ⇒ Parser s CLI
 stop = (try $ string "stop" <|> string "s") *> pure Stop
+
+downloads ∷ ∀ s. StringLike s ⇒ Parser s CLI
+downloads = (try $ string "downloads" <|> string "d") *> pure Downloads
 
 compile ∷ ∀ s. StringLike s ⇒ Parser s CLI
 compile = (try $ string "compile" <|> string "k") *> pure Compile

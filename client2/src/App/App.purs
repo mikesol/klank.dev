@@ -32,6 +32,7 @@ import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.String.Base64 (decode)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
@@ -51,6 +52,7 @@ import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
 import Web.File.File (File)
 import Web.File.File as WF
+import Halogen.Query.EventSource as ES
 
 foreign import data BrowserMicrophone :: Type
 
@@ -100,6 +102,7 @@ _upload = SProxy :: SProxy "upload"
 
 data MainDisplay
   = EditorDisplay
+  | DownloadsDisplay
   | CanvasDisplay
   | SplitDisplay
   | UploadDisplay
@@ -121,6 +124,7 @@ type State
     , showTerminal :: Boolean
     , tracks :: Object BrowserAudioTrack
     , recorders :: Object (RecorderSignature MediaRecorder)
+    , downloadLinks :: Array (Tuple String String)
     , buffers :: Object BrowserAudioBuffer
     , floatArrays :: Object BrowserFloatArray
     , periodicWaves :: Object BrowserPeriodicWave
@@ -212,6 +216,7 @@ component =
           , tracks: O.empty
           , buffers: O.empty
           , recorders: O.empty
+          , downloadLinks: []
           , floatArrays: O.empty
           , periodicWaves: O.empty
           , klankShouldWork: true
@@ -257,6 +262,7 @@ render { editorText
 , playModalOpen
 , showTerminal
 , isPlaying
+, downloadLinks
 } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     ( [ HH.div
@@ -274,6 +280,20 @@ render { editorText
               ( join
                   [ [ HH.div [ HP.classes $ map ClassName [ "flex", "flex-grow" ] ] case mainDisplay of
                         EditorDisplay -> [ editorDisplay editorText ]
+                        DownloadsDisplay ->
+                          [ HH.div
+                              [ HP.classes
+                                  $ map ClassName [ "h-full", "w-full" ]
+                              ]
+                              ( [ HH.p
+                                    [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
+                                    ]
+                                    [ HH.text "Download links" ]
+                                , HH.p [] [ HH.text "Below you can find links to downloadable files from the current session" ]
+                                , HH.ul [] (map (\(Tuple name url) -> HH.li [] [ HH.a [ HP.href url, HP.download name ] [ HH.text name ] ]) downloadLinks)
+                                ]
+                              )
+                          ]
                         UploadDisplay ->
                           [ HH.slot _upload Uploader DropzoneComponent.component
                               {}
@@ -587,7 +607,7 @@ playKlank = do
   prevBuffers <- H.gets _.buffers
   buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
   prevRecorders <- H.gets _.recorders
-  recorders <- H.liftAff (affable $ klank.recorders O.empty (\_ _ -> pure unit) prevRecorders)
+  recorders <- H.liftAff (affable $ klank.recorders O.empty (\k v -> pure unit) prevRecorders)
   prevFloatArrays <- H.gets _.floatArrays
   floatArrays <- H.liftAff (affable $ klank.floatArrays prevFloatArrays)
   prevPeriodicWaves <- H.gets _.periodicWaves
@@ -755,6 +775,9 @@ handleTerminalOutput = case _ of
       Right CLI.Editor -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = EditorDisplay })
+      Right CLI.Downloads -> do
+        void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
+        H.modify_ (_ { mainDisplay = DownloadsDisplay })
       Right CLI.Upload -> do
         void (H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\n$ "))
         H.modify_ (_ { mainDisplay = UploadDisplay })
