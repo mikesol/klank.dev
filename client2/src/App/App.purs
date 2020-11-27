@@ -19,7 +19,6 @@ import App.LinkModal (modal)
 import App.LoadingModal (loading)
 import App.XTermComponent (focus, setFontSize, writeText)
 import App.XTermComponent as XTermComponent
-import Control.Monad.State (class MonadState)
 import Control.Promise (Promise, toAffE)
 import Data.Argonaut (getField, toObject)
 import Data.Argonaut.Encode (encodeJson)
@@ -34,7 +33,7 @@ import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Aff (Aff, makeAff)
+import Effect.Aff (Aff, launchAff_, makeAff, try)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, throw)
@@ -43,7 +42,7 @@ import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as O
 import Graphics.Canvas (CanvasElement)
-import Halogen (ClassName(..))
+import Halogen (ClassName(..), SubscriptionId)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -128,6 +127,7 @@ type State
     , buffers :: Object BrowserAudioBuffer
     , floatArrays :: Object BrowserFloatArray
     , periodicWaves :: Object BrowserPeriodicWave
+    , playerSubscriptionId :: Maybe SubscriptionId
     }
 
 data WhichAce
@@ -220,6 +220,7 @@ component =
           , floatArrays: O.empty
           , periodicWaves: O.empty
           , klankShouldWork: true
+          , playerSubscriptionId: Nothing
           }
     , render
     , eval:
@@ -493,8 +494,8 @@ handleAction = case _ of
           }
       )
     void $ H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
-  PlayStartFailed -> void $ H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying failed. Please try agian later.\r\n$ ")
-  RecordingRegistered k v -> pure unit
+  PlayStartFailed s -> void $ H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying failed. " <> s <> " Please try agian later.\r\n$ ")
+  RecordingRegistered k v -> H.modify_ (\i -> i { downloadLinks = i.downloadLinks <> [ Tuple k v ] })
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
   HandleFileDrop msg -> handleUploaderOutput msg
@@ -510,12 +511,11 @@ handleUploaderOutput = case _ of
     newBuffer <- H.liftAff $ toAffE (bufferFromFile ctx file)
     H.modify_ (\i -> i { buffers = O.union (O.singleton (WF.name file) newBuffer) i.buffers })
 
-stopper :: ∀ t1 t8. Bind t1 ⇒ MonadState { stopFn :: Maybe (Effect Unit), audioCtx :: Maybe AudioContext | t8 } t1 ⇒ MonadEffect t1 ⇒ t1 Unit
+stopper :: ∀ t32 t33 t34 t35 t42. MonadEffect t32 ⇒ H.HalogenM { audioCtx ∷ Maybe AudioContext, playerSubscriptionId ∷ Maybe SubscriptionId, stopFn ∷ Maybe (Effect Unit) | t42 } t35 t34 t33 t32 Unit
 stopper = do
   sfn <- H.gets _.stopFn
   ctx <- H.gets _.audioCtx
-  H.modify_ (_ { stopFn = Nothing })
-  H.modify_ (_ { audioCtx = Nothing })
+  H.modify_ (_ { stopFn = Nothing, audioCtx = Nothing, playerSubscriptionId = Nothing })
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
@@ -592,9 +592,11 @@ compile = do
     )
     txt_
 
-playKlank :: ∀ t338 t341 m t346 t347. MonadEffect m ⇒ MonadAff m ⇒ H.HalogenM State t347 ( xterm ∷ H.Slot XTermComponent.Query t341 WhichTerm | t338 ) t346 m Unit
+playKlank :: forall m o. MonadEffect m => MonadAff m => H.HalogenM State Action ChildSlots o m Unit
 playKlank = do
   stopper
+  oldSubId <- H.gets _.playerSubscriptionId
+  maybe (pure unit) H.unsubscribe oldSubId
   _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nRetrieving assets...")
   klank <- H.liftEffect getKlank
   ctx <- H.liftEffect makeAudioContext
@@ -612,43 +614,67 @@ playKlank = do
   -- note that the subscription won't have a finalizer for now
   -- may lead to wanky memory, we can look into that...
   -- 2. create actions for everything below.
-  void $ H.subscribe
-    $ ES.affEventSource \emitter -> do
-        microphones <-
-          if klank.enableMicrophone then
-            ( do
-                mic <- getMicrophone
-                pure $ O.singleton "microphone" mic
-            )
-          else
-            pure O.empty
-        accumulator <- case initialAccumulator of
-          Nothing -> (affable $ klank.accumulator)
-          Just acc -> pure acc
-        worklets <- (affable $ klank.worklets prevWorklets)
-        -------------
-        ----- maybe it's just superstition
-        ---- but i think this didn't work unless I explicitly asked for a variable `o`
-        --- instead of _ <-
-        --------- weird...
-        o <- traverse (toAffE <<< audioWorkletAddModule ctx) worklets
-        tracks <- affable $ klank.tracks prevTracks
-        buffers <- affable $ klank.buffers ctx prevBuffers
-        recorders <- affable $ klank.recorders O.empty (\k v -> pure unit) prevRecorders
-        floatArrays <- affable $ klank.floatArrays prevFloatArrays
-        periodicWaves <- affable $ klank.periodicWaves ctx prevPeriodicWaves
-        engineInfo <- affable $ klank.engineInfo
-        turnMeOff <-
-          H.liftEffect
-            ( klank.run
-                accumulator
-                ctx
-                engineInfo
-                { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
-                { canvases: O.singleton "canvas" canvasOrBust }
-                klank.exporter
-            )
-        ES.emit emitter (PlayStartSucceeded)
+  subId <-
+    H.subscribe
+      $ ES.affEventSource \emitter -> do
+          res <-
+            try do
+              microphones <-
+                if klank.enableMicrophone then
+                  ( do
+                      mic <- getMicrophone
+                      pure $ O.singleton "microphone" mic
+                  )
+                else
+                  pure O.empty
+              accumulator <- case initialAccumulator of
+                Nothing -> (affable $ klank.accumulator)
+                Just acc -> pure acc
+              worklets <- (affable $ klank.worklets prevWorklets)
+              -------------
+              ----- maybe it's just superstition
+              ---- but i think this didn't work unless I explicitly asked for a variable `o`
+              --- instead of _ <-
+              --------- weird...
+              o <- traverse (toAffE <<< audioWorkletAddModule ctx) worklets
+              tracks <- affable $ klank.tracks prevTracks
+              buffers <- affable $ klank.buffers ctx prevBuffers
+              recorders <-
+                affable
+                  $ klank.recorders
+                      O.empty
+                      ( \k v -> launchAff_ $ ES.emit emitter (RecordingRegistered k v)
+                      )
+                      prevRecorders
+              floatArrays <- affable $ klank.floatArrays prevFloatArrays
+              periodicWaves <- affable $ klank.periodicWaves ctx prevPeriodicWaves
+              engineInfo <- affable $ klank.engineInfo
+              turnMeOff <-
+                H.liftEffect
+                  ( klank.run
+                      accumulator
+                      ctx
+                      engineInfo
+                      { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
+                      { canvases: O.singleton "canvas" canvasOrBust }
+                      klank.exporter
+                  )
+              pure
+                { stopFn: Just turnMeOff
+                , isPlaying: Just true
+                , periodicWaves: periodicWaves
+                , audioCtx: Just ctx
+                , recorders: recorders
+                , worklets: worklets
+                , tracks: tracks
+                , buffers: buffers
+                , floatArrays: floatArrays
+                }
+          case res of
+            Left err -> ES.emit emitter (PlayStartFailed (show err))
+            Right resp -> ES.emit emitter (PlayStartSucceeded resp)
+          pure mempty -- todo: make a better finalizer?
+  H.modify_ (_ { playerSubscriptionId = Just subId })
   pure unit
 
 -- todo - avoid Firebase call for extra link
