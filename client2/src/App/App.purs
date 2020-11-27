@@ -48,11 +48,11 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.Query.EventSource as ES
 import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
 import Web.File.File (File)
 import Web.File.File as WF
-import Halogen.Query.EventSource as ES
 
 foreign import data BrowserMicrophone :: Type
 
@@ -478,6 +478,23 @@ handleAction = case _ of
     else
       H.modify_ (_ { loadingModalOpen = false })
     pure mempty
+  PlayStartSucceeded playerInfo -> do
+    H.modify_
+      ( _
+          { stopFn = playerInfo.stopFn
+          , isPlaying = playerInfo.isPlaying
+          , periodicWaves = playerInfo.periodicWaves
+          , audioCtx = playerInfo.audioCtx
+          , recorders = playerInfo.recorders
+          , worklets = playerInfo.worklets
+          , tracks = playerInfo.tracks
+          , buffers = playerInfo.buffers
+          , floatArrays = playerInfo.floatArrays
+          }
+      )
+    void $ H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
+  PlayStartFailed -> void $ H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying failed. Please try agian later.\r\n$ ")
+  RecordingRegistered k v -> pure unit
   HandleAceUpdate msg -> handleAceOuput msg
   HandleTerminalUpdate msg -> handleTerminalOutput msg
   HandleFileDrop msg -> handleUploaderOutput msg
@@ -582,61 +599,56 @@ playKlank = do
   klank <- H.liftEffect getKlank
   ctx <- H.liftEffect makeAudioContext
   H.liftAff (toAffE $ loadCustomAudioNodes ctx)
-  microphones <-
-    if klank.enableMicrophone then
-      ( do
-          mic <- H.liftAff getMicrophone
-          pure $ O.singleton "microphone" mic
-      )
-    else
-      pure O.empty
   initialAccumulator <- H.gets _.initialAccumulator
-  accumulator <- case initialAccumulator of
-    Nothing -> H.liftAff (affable $ klank.accumulator)
-    Just acc -> pure acc
   prevWorklets <- H.gets _.worklets
-  worklets <- H.liftAff (affable $ klank.worklets prevWorklets)
-  -------------
-  ----- maybe it's just superstition
-  ---- but i think this didn't work unless I explicitly asked for a variable `o`
-  --- instead of _ <-
-  --------- weird...
-  o <- traverse (H.liftAff <<< toAffE <<< audioWorkletAddModule ctx) worklets
   prevTracks <- H.gets _.tracks
-  tracks <- H.liftAff (affable $ klank.tracks prevTracks)
-  prevBuffers <- H.gets _.buffers
-  buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
   prevRecorders <- H.gets _.recorders
-  recorders <- H.liftAff (affable $ klank.recorders O.empty (\k v -> pure unit) prevRecorders)
+  prevBuffers <- H.gets _.buffers
   prevFloatArrays <- H.gets _.floatArrays
-  floatArrays <- H.liftAff (affable $ klank.floatArrays prevFloatArrays)
   prevPeriodicWaves <- H.gets _.periodicWaves
-  periodicWaves <- H.liftAff (affable $ klank.periodicWaves ctx prevPeriodicWaves)
-  engineInfo <- H.liftAff (affable $ klank.engineInfo)
-  turnMeOff <-
-    H.liftEffect
-      ( klank.run
-          accumulator
-          ctx
-          engineInfo
-          { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
-          { canvases: O.singleton "canvas" canvasOrBust }
-          klank.exporter
-      )
-  H.modify_
-    ( _
-        { stopFn = Just turnMeOff
-        , isPlaying = Just true
-        , periodicWaves = periodicWaves
-        , audioCtx = Just ctx
-        , recorders = recorders
-        , worklets = worklets
-        , tracks = tracks
-        , buffers = buffers
-        , floatArrays = floatArrays
-        }
-    )
-  _ <- H.query _xterm Terminal $ H.tell (XTermComponent.ChangeText $ "\r\nPlaying\r\n$ ")
+  -- steps
+  -- 1. refactor all of the aff stuff below to subscribe function
+  -- body of this subscription
+  -- note that the subscription won't have a finalizer for now
+  -- may lead to wanky memory, we can look into that...
+  -- 2. create actions for everything below.
+  void $ H.subscribe
+    $ ES.affEventSource \emitter -> do
+        microphones <-
+          if klank.enableMicrophone then
+            ( do
+                mic <- getMicrophone
+                pure $ O.singleton "microphone" mic
+            )
+          else
+            pure O.empty
+        accumulator <- case initialAccumulator of
+          Nothing -> (affable $ klank.accumulator)
+          Just acc -> pure acc
+        worklets <- (affable $ klank.worklets prevWorklets)
+        -------------
+        ----- maybe it's just superstition
+        ---- but i think this didn't work unless I explicitly asked for a variable `o`
+        --- instead of _ <-
+        --------- weird...
+        o <- traverse (toAffE <<< audioWorkletAddModule ctx) worklets
+        tracks <- affable $ klank.tracks prevTracks
+        buffers <- affable $ klank.buffers ctx prevBuffers
+        recorders <- affable $ klank.recorders O.empty (\k v -> pure unit) prevRecorders
+        floatArrays <- affable $ klank.floatArrays prevFloatArrays
+        periodicWaves <- affable $ klank.periodicWaves ctx prevPeriodicWaves
+        engineInfo <- affable $ klank.engineInfo
+        turnMeOff <-
+          H.liftEffect
+            ( klank.run
+                accumulator
+                ctx
+                engineInfo
+                { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
+                { canvases: O.singleton "canvas" canvasOrBust }
+                klank.exporter
+            )
+        ES.emit emitter (PlayStartSucceeded)
   pure unit
 
 -- todo - avoid Firebase call for extra link
