@@ -12,6 +12,7 @@ You can edit this file as you like.
   , "node-process"
   , "profunctor-lenses"
   , "psci-support"
+  , "quickcheck"
   , "simple-json"
   , "sunde"
   , "typelevel-klank-dev"
