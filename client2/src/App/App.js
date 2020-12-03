@@ -90,6 +90,11 @@ exports.getNoterm = function () {
   var myParam = urlParams.get("noterm");
   return myParam === null || myParam === "false" ? false : true;
 };
+exports.getNostop = function () {
+  var urlParams = new URLSearchParams(window.location.search);
+  var myParam = urlParams.get("nostop");
+  return myParam === null || myParam === "false" ? false : true;
+};
 
 exports.getC = function () {
   var urlParams = new URLSearchParams(window.location.search);

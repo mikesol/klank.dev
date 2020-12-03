@@ -71,6 +71,8 @@ foreign import getEC :: Effect Boolean
 
 foreign import getNoterm :: Effect Boolean
 
+foreign import getNostop :: Effect Boolean
+
 foreign import getB64 :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
 foreign import getInitialAccumulator :: Maybe Foreign -> (Foreign -> Maybe Foreign) -> Effect (Maybe Foreign)
@@ -121,6 +123,7 @@ type State
     , linkModalProperNoun :: String
     , playModalOpen :: Boolean
     , showTerminal :: Boolean
+    , noStop :: Boolean
     , tracks :: Object BrowserAudioTrack
     , recorders :: Object (RecorderSignature MediaRecorder)
     , downloadLinks :: Array (Tuple String String)
@@ -208,6 +211,7 @@ component =
           , loadingModalOpen: true
           , linkModalOpen: false
           , showTerminal: true
+          , noStop: false
           , linkModalUrl: ""
           , linkModalProperNoun: "klank"
           , playModalOpen: false
@@ -264,6 +268,7 @@ render { editorText
 , showTerminal
 , isPlaying
 , downloadLinks
+, noStop
 } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     ( [ HH.div
@@ -341,7 +346,7 @@ render { editorText
           { open: loadingModalOpen
           }
       ]
-        <> ( if (not showTerminal && not loadingModalOpen && not playModalOpen) then
+        <> ( if (not showTerminal && not loadingModalOpen && not playModalOpen && not noStop) then
               ( maybe []
                   ( \ip ->
                       [ HH.div [ HP.classes $ map ClassName [ "modal", "fixed", "pr-8", "pb-8", "right-0", "bottom-0" ] ]
@@ -407,11 +412,13 @@ handleAction = case _ of
     c <- H.liftEffect $ getC
     ec <- H.liftEffect $ getEC
     noterm <- H.liftEffect $ getNoterm
+    nostop <- H.liftEffect $ getNostop
     when noterm
       ( do
           H.modify_
             ( _
                 { showTerminal = false
+                , noStop = nostop
                 , mainDisplay = CanvasDisplay
                 }
             )
