@@ -10,3 +10,6 @@
   /* progress bar covers file name */
   display: none !important;
 }
+body {
+  overscroll-behavior: contain;
+}
