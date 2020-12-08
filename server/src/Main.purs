@@ -55,7 +55,19 @@ compiler { body } =
   bracket
     ( do
         uuid' <- liftEffect $ genUUID
-        _ <- liftEffect $ mkdir ("deps/" <> (toString uuid'))
+        whatHappened <-
+          spawn
+            { args:
+                [ "-r"
+                , "deps/"
+                , "/tmp/deps"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+
+        _ <- liftEffect $ mkdir ("/tmp/deps/" <> (toString uuid'))
         pure (toString uuid')
     )
     ( \uuid -> do
@@ -67,42 +79,42 @@ compiler { body } =
           try
             ( liftEffect
                 $ unlink
-                    ("./deps/" <> uuid <> "/index_.js")
+                    ("/tmp/deps/" <> uuid <> "/index_.js")
             )
         _ <-
           try
             ( liftEffect
                 $ unlink
-                    ("./deps/" <> uuid <> "/index.js")
+                    ("/tmp/deps/" <> uuid <> "/index.js")
             )
         _ <-
           try
             ( liftEffect
                 $ unlink
-                    ("./output/" <> moduleName <> "/externs.cbor")
+                    ("/tmp/output/" <> moduleName <> "/externs.cbor")
             )
         _ <-
           try
             ( liftEffect
                 $ unlink
-                    ("./output/" <> moduleName <> "/index.js")
+                    ("/tmp/output/" <> moduleName <> "/index.js")
             )
         _ <-
           try
             ( liftEffect
                 $ rmdir
-                    ("./output/" <> moduleName)
+                    ("/tmp/output/" <> moduleName)
             )
-        liftEffect $ unlink ("./deps/" <> uuid <> "/Main.purs")
-        liftEffect $ rmdir ("./deps/" <> uuid)
-        liftEffect $ unlink ("./deps/" <> uuid <> ".dhall")
+        liftEffect $ unlink ("/tmp/deps/" <> uuid <> "/Main.purs")
+        liftEffect $ rmdir ("/tmp/deps/" <> uuid)
+        liftEffect $ unlink ("/tmp/deps/" <> uuid <> ".dhall")
     )
     ( \uuid -> do
         _ <-
           liftEffect
             $ writeTextFile
                 UTF8
-                ("deps/" <> uuid <> ".dhall")
+                ("/tmp/deps/" <> uuid <> ".dhall")
                 ("let conf = ./spago.dhall\nin conf // { sources = conf.sources # [ \"" <> uuid <> "/Main.purs\" ] }")
         let
           mod = hackishlyGetModule body.code
@@ -113,13 +125,13 @@ compiler { body } =
           liftEffect
             $ writeTextFile
                 UTF8
-                ("deps/" <> uuid <> "/index_.js")
+                ("/tmp/deps/" <> uuid <> "/index_.js")
                 ("window.klank = require(\"../output/" <> renamed.moduleName <> "/\").main")
         _ <-
           liftEffect
             $ writeTextFile
                 UTF8
-                ("deps/" <> uuid <> "/Main.purs")
+                ("/tmp/deps/" <> uuid <> "/Main.purs")
                 renamed.code
         whatHappened <-
           spawn
@@ -132,7 +144,7 @@ compiler { body } =
             , stdin: Nothing
             }
             defaultSpawnOptions
-              { cwd = Just "deps"
+              { cwd = Just "/tmp/deps"
               }
         whatHappened2 <-
           spawn
@@ -146,16 +158,16 @@ compiler { body } =
             , stdin: Nothing
             }
             defaultSpawnOptions
-              { cwd = Just "deps"
+              { cwd = Just "/tmp/deps"
               }
-        worked <- liftEffect $ exists ("deps/" <> uuid <> "/index.js")
+        worked <- liftEffect $ exists ("/tmp/deps/" <> uuid <> "/index.js")
         if worked then
           ( do
               res <-
                 liftEffect
                   $ readTextFile
                       UTF8
-                      ("deps/" <> uuid <> "/index.js")
+                      ("/tmp/deps/" <> uuid <> "/index.js")
               pure
                 { res: Just res
                 , error: Nothing
