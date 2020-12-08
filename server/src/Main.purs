@@ -136,11 +136,12 @@ compiler { body } =
         whatHappened <-
           spawn
             { args:
-                [ "-x"
+                [ "spago"
+                , "-x"
                 , uuid <> ".dhall"
                 , "build"
                 ]
-            , cmd: if platform == Just Win32 then "spago.cmd" else "spago"
+            , cmd: "npx"
             , stdin: Nothing
             }
             defaultSpawnOptions
