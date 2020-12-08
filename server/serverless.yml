@@ -1,0 +1,23 @@
+org: mikesol
+app: klank-dev
+
+service: klank-dev
+frameworkVersion: "2"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-1
+  memorySize: 4096
+
+functions:
+  compile-klank:
+    timeout: 60
+    handler: handler.handler
+    events:
+      - http:
+          method: post
+          path: compile
+          cors: true
+    environment:
+      MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
