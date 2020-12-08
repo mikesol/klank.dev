@@ -136,12 +136,11 @@ compiler { body } =
         whatHappened <-
           spawn
             { args:
-                [ "spago"
-                , "-x"
+                [ "-x"
                 , uuid <> ".dhall"
                 , "build"
                 ]
-            , cmd: "npx"
+            , cmd: "/var/task/node_modules/.bin/spago"
             , stdin: Nothing
             }
             defaultSpawnOptions
