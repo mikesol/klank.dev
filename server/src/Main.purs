@@ -12,12 +12,10 @@ import Data.UUID (genUUID, toString)
 import Effect (Effect)
 import Effect.Aff (Aff, bracket, launchAff_, try)
 import Effect.Class (liftEffect)
--- import Effect.Class.Console (log)
+import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
-import Node.Platform (Platform(..))
-import Node.Process (platform)
 import Simple.JSON (writeJSON)
 import Sunde (spawn)
 
@@ -110,6 +108,7 @@ compiler { body } =
         liftEffect $ unlink ("/tmp/deps/" <> uuid <> ".dhall")
     )
     ( \uuid -> do
+        _ <- liftEffect $ log "Trying to compile on lambda path"
         _ <-
           liftEffect
             $ writeTextFile
