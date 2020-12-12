@@ -79,6 +79,8 @@ foreign import getInitialAccumulator :: Maybe Foreign -> (Foreign -> Maybe Forei
 
 foreign import getUrl :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
+foreign import getKlankUrl :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
+
 foreign import escape :: String -> Effect String
 
 foreign import canvasDimensionHack :: Effect Unit
@@ -111,6 +113,7 @@ data MainDisplay
 type State
   = { editorText :: String
     , isPlaying :: Maybe Boolean
+    , compiledKlank :: Maybe String
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
     , audioCtx :: Maybe AudioContext
@@ -205,6 +208,7 @@ component =
         \_ ->
           { editorText: initialPS
           , isPlaying: Nothing
+          , compiledKlank: Nothing
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
           , audioCtx: Nothing
@@ -385,6 +389,23 @@ foreign import getMicrophoneImpl :: Effect (Promise BrowserMicrophone)
 getMicrophone :: Aff BrowserMicrophone
 getMicrophone = toAffE getMicrophoneImpl
 
+simplGetr :: forall m. Bind m => MonadAff m => String -> m String
+simplGetr txt = do
+  result <-
+    H.liftAff
+      $ AX.request
+          ( AX.defaultRequest
+              { url = txt
+              , method = Left GET
+              , responseFormat = AXRF.string
+              }
+          )
+  opt <-
+    either (\_ -> H.liftEffect $ throw "Could not retrieve")
+      (pure <<< _.body)
+      result
+  pure opt
+
 handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
   PlayKlankFromModal -> do
@@ -408,6 +429,7 @@ handleAction = case _ of
       )
     b64 <- H.liftEffect $ getB64 Nothing Just
     url <- H.liftEffect $ getUrl Nothing Just
+    klankUrl <- H.liftEffect $ getUrl Nothing Just
     k <- H.liftEffect $ getK
     c <- H.liftEffect $ getC
     ec <- H.liftEffect $ getEC
@@ -454,21 +476,18 @@ handleAction = case _ of
       Nothing -> pure unit
       Just txt ->
         ( do
-            result <-
-              H.liftAff
-                $ AX.request
-                    ( AX.defaultRequest
-                        { url = txt
-                        , method = Left GET
-                        , responseFormat = AXRF.string
-                        }
-                    )
-            editorText <-
-              either (\_ -> H.liftEffect $ throw "Could not retrieve")
-                (pure <<< _.body)
-                result
+            editorText <- simplGetr txt
             H.modify_ (_ { editorText = editorText })
             _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
+            pure unit
+        )
+    case klankUrl of
+      Nothing -> pure unit
+      Just txt ->
+        ( do
+            compiledKlank <- simplGetr txt
+            H.modify_ (_ { compiledKlank = Just compiledKlank })
+            H.liftEffect $ completelyUnsafeEval compiledKlank
             pure unit
         )
     case (k || noterm) of
@@ -582,6 +601,7 @@ compile = do
                       )
                       ( \res -> do
                           -- H.liftEffect $ log res
+                          H.modify_ (_ { compiledKlank = Just res })
                           H.liftEffect $ completelyUnsafeEval res
                           _ <-
                             H.query
@@ -684,9 +704,13 @@ playKlank = do
   H.modify_ (_ { playerSubscriptionId = Just subId })
   pure unit
 
+data LinkType
+  = FromEditor
+  | FromCompiledKlank
+
 -- todo - avoid Firebase call for extra link
-makeLink :: ∀ m t723 t724. MonadEffect m ⇒ MonadAff m ⇒ Boolean -> Boolean -> H.HalogenM State t724 ChildSlots t723 m Unit
-makeLink noTerm justLink = do
+makeLink :: ∀ m t723 t724. MonadEffect m ⇒ MonadAff m ⇒ Boolean -> Boolean -> LinkType -> H.HalogenM State t724 ChildSlots t723 m Unit
+makeLink noTerm justLink linkType = do
   url <- H.liftEffect firebaseUrl
   txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
   maybe
@@ -699,7 +723,13 @@ makeLink noTerm justLink = do
         pure unit
     )
     ( \code' -> do
-        code <- maybe (H.liftEffect $ throw "Could not retrieve the code") pure code'
+        compiled <- H.gets _.compiledKlank
+        code <-
+          maybe (H.liftEffect $ throw "Could not retrieve the code") pure
+            ( case linkType of
+                FromEditor -> code'
+                FromCompiledKlank -> compiled
+            )
         _ <-
           H.query
             _xterm
@@ -713,7 +743,13 @@ makeLink noTerm justLink = do
                 ( AX.defaultRequest
                     { headers = []
                     , method = Left POST
-                    , url = (surl <> "u")
+                    , url =
+                      ( surl
+                          <> ( case linkType of
+                                FromEditor -> "u"
+                                FromCompiledKlank -> "uk"
+                            )
+                      )
                     , content =
                       ( Just
                           ( RequestBody.json
@@ -752,7 +788,14 @@ makeLink noTerm justLink = do
                                   { dynamicLinkInfo:
                                       -- mx@
                                       { domainUriPrefix: "https://link.klank.dev"
-                                      , link: "https://klank.dev/?" <> (if noTerm then "noterm" else "k") <> "&url=" <> _uploadLink
+                                      , link:
+                                          "https://klank.dev/?" <> (if noTerm then "noterm" else "k") <> "&"
+                                            <> ( case linkType of
+                                                  FromEditor -> "url"
+                                                  FromCompiledKlank -> "klank"
+                                              )
+                                            <> "="
+                                            <> _uploadLink
                                       }
                                   }
                           )
@@ -840,7 +883,8 @@ handleTerminalOutput = case _ of
         stopper
         H.modify_ (_ { isPlaying = Just false })
       Right CLI.Compile -> compile
-      Right CLI.LinkNoTerm -> makeLink true false
-      Right CLI.Link -> makeLink false false
-      Right CLI.FileLink -> makeLink false true
+      Right CLI.LinkNoTerm -> makeLink true false FromEditor
+      Right CLI.LinkCompiledKlank -> makeLink false false FromCompiledKlank
+      Right CLI.Link -> makeLink false false FromEditor
+      Right CLI.FileLink -> makeLink false true FromEditor
     pure unit

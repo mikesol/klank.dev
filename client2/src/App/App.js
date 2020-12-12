@@ -17,6 +17,15 @@ exports.getUrl = function (nothing) {
     };
   };
 };
+exports.getKlankUrl = function (nothing) {
+  return function (just) {
+    return function () {
+      var urlParams = new URLSearchParams(window.location.search);
+      var myParam = urlParams.get("klank");
+      return myParam ? just(myParam) : nothing;
+    };
+  };
+};
 exports.getInitialAccumulator = function (nothing) {
   return function (just) {
     return function () {
