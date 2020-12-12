@@ -20,7 +20,7 @@ import App.LoadingModal (loading)
 import App.XTermComponent (focus, setFontSize, writeText)
 import App.XTermComponent as XTermComponent
 import Control.Promise (Promise, toAffE)
-import Data.Argonaut (getField, toObject)
+import Data.Argonaut (class EncodeJson, getField, toObject)
 import Data.Argonaut.Encode (encodeJson)
 import Data.Either (Either(..), either)
 import Data.Generic.Rep (class Generic)
@@ -239,7 +239,7 @@ component =
               }
     }
 
-editorDisplay :: ∀ m. MonadAff m ⇒ String → HH.HTML (H.ComponentSlot HH.HTML ChildSlots m Action) Action
+editorDisplay :: ∀ m. MonadAff m => String -> HH.HTML (H.ComponentSlot HH.HTML ChildSlots m Action) Action
 editorDisplay editorText =
   HH.slot _ace Editor AceComponent.component
     { editorStyling:
@@ -406,7 +406,7 @@ simplGetr txt = do
       result
   pure opt
 
-handleAction :: forall o m. MonadAff m => Action → H.HalogenM State Action ChildSlots o m Unit
+handleAction :: forall o m. MonadAff m => Action -> H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
   PlayKlankFromModal -> do
     H.modify_ (_ { playModalOpen = false })
@@ -537,7 +537,7 @@ handleUploaderOutput = case _ of
     newBuffer <- H.liftAff $ toAffE (bufferFromFile ctx file)
     H.modify_ (\i -> i { buffers = O.union (O.singleton (WF.name file) newBuffer) i.buffers })
 
-stopper :: ∀ t32 t33 t34 t35 t42. MonadEffect t32 ⇒ H.HalogenM { audioCtx ∷ Maybe AudioContext, playerSubscriptionId ∷ Maybe SubscriptionId, stopFn ∷ Maybe (Effect Unit) | t42 } t35 t34 t33 t32 Unit
+stopper :: ∀ t32 t33 t34 t35 t42. MonadEffect t32 => H.HalogenM { audioCtx ∷ Maybe AudioContext, playerSubscriptionId ∷ Maybe SubscriptionId, stopFn ∷ Maybe (Effect Unit) | t42 } t35 t34 t33 t32 Unit
 stopper = do
   sfn <- H.gets _.stopFn
   ctx <- H.gets _.audioCtx
@@ -545,7 +545,7 @@ stopper = do
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
-compile :: ∀ t119 t123 t124 t125 t140 t293. MonadEffect t123 ⇒ MonadAff t123 ⇒ H.HalogenM State t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
+compile :: ∀ t119 t123 t124 t125 t140 t293. MonadEffect t123 => MonadAff t123 => H.HalogenM State t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
 compile = do
   url <- H.liftEffect serverUrl
   -- in case we are in compile mode, we use editorText
@@ -715,8 +715,47 @@ data LinkType
   = FromEditor
   | FromCompiledKlank
 
+makeUploadLink :: ∀ t167 t210 t211 t212 t213. MonadEffect t210 => MonadAff t210 => EncodeJson t167 => LinkType -> t167 -> H.HalogenM t213 t212 ChildSlots t211 t210 String
+makeUploadLink linkType code = do
+  surl <- H.liftEffect serverUrl
+  _uploadLink' <-
+    H.liftAff
+      $ AX.request
+          ( AX.defaultRequest
+              { headers = []
+              , method = Left POST
+              , url =
+                ( surl
+                    <> ( case linkType of
+                          FromEditor -> "u"
+                          FromCompiledKlank -> "uk"
+                      )
+                )
+              , content =
+                ( Just
+                    ( RequestBody.json
+                        $ encodeJson
+                            { code }
+                    )
+                )
+              , responseFormat = AXRF.string
+              }
+          )
+  either
+    ( \_ -> do
+        _ <-
+          H.query
+            _xterm
+            Terminal
+            $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
+        pure unit
+        H.liftEffect $ throw "Could not process sound."
+    )
+    (pure <<< _.body)
+    _uploadLink'
+
 -- todo - avoid Firebase call for extra link
-makeLink :: ∀ m t723 t724. MonadEffect m ⇒ MonadAff m ⇒ Boolean -> Boolean -> LinkType -> H.HalogenM State t724 ChildSlots t723 m Unit
+makeLink :: ∀ m t723 t724. MonadEffect m => MonadAff m => Boolean -> Boolean -> LinkType -> H.HalogenM State t724 ChildSlots t723 m Unit
 makeLink noTerm justLink linkType = do
   url <- H.liftEffect firebaseUrl
   txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
@@ -730,56 +769,24 @@ makeLink noTerm justLink linkType = do
         pure unit
     )
     ( \code' -> do
-        compiled <- H.gets _.compiledKlank
-        code <-
-          maybe (H.liftEffect $ throw "Could not retrieve the code") pure
-            ( case linkType of
-                FromEditor -> code'
-                FromCompiledKlank -> compiled
-            )
         _ <-
           H.query
             _xterm
             Terminal
             $ H.tell (XTermComponent.ChangeText $ "\r\nGenerating a link...")
-        -- mx@
-        surl <- H.liftEffect serverUrl
-        _uploadLink' <-
-          H.liftAff
-            $ AX.request
-                ( AX.defaultRequest
-                    { headers = []
-                    , method = Left POST
-                    , url =
-                      ( surl
-                          <> ( case linkType of
-                                FromEditor -> "u"
-                                FromCompiledKlank -> "uk"
-                            )
-                      )
-                    , content =
-                      ( Just
-                          ( RequestBody.json
-                              $ encodeJson
-                                  { code }
-                          )
-                      )
-                    , responseFormat = AXRF.string
-                    }
-                )
-        _uploadLink <-
-          either
-            ( \_ -> do
-                _ <-
-                  H.query
-                    _xterm
-                    Terminal
-                    $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
-                pure unit
-                H.liftEffect $ throw "Could not process sound."
-            )
-            (pure <<< _.body)
-            _uploadLink'
+        code <-
+          maybe (H.liftEffect $ throw "Could not retrieve the code") pure code'
+        _codeUploadLink <- makeUploadLink FromEditor code
+        compiled' <- H.gets _.compiledKlank
+        _compiledUploadLink <-
+          ( case linkType of
+              FromEditor -> pure Nothing
+              FromCompiledKlank -> do
+                compiled <-
+                  maybe (H.liftEffect $ throw "Could not retrieve the code") pure compiled'
+                Just <$> makeUploadLink FromCompiledKlank compiled
+          )
+        ----
         firebaseT <- H.liftEffect firebaseToken
         response <-
           H.liftAff
@@ -796,13 +803,12 @@ makeLink noTerm justLink linkType = do
                                       -- mx@
                                       { domainUriPrefix: "https://link.klank.dev"
                                       , link:
-                                          "https://klank.dev/?" <> (if noTerm then "noterm" else "k") <> "&"
-                                            <> ( case linkType of
-                                                  FromEditor -> "url"
-                                                  FromCompiledKlank -> "klank"
+                                          "https://klank.dev/?" <> (if noTerm then "noterm" else "k") <> "&url="
+                                            <> _codeUploadLink
+                                            <> ( case _compiledUploadLink of
+                                                  Nothing -> mempty
+                                                  Just x -> "&klank=" <> x
                                               )
-                                            <> "="
-                                            <> _uploadLink
                                       }
                                   }
                           )
@@ -838,7 +844,7 @@ makeLink noTerm justLink linkType = do
                       ( \res -> do
                           H.modify_
                             ( _
-                                { linkModalUrl = if justLink then _uploadLink else res
+                                { linkModalUrl = if justLink then _codeUploadLink else res
                                 , linkModalOpen = true
                                 , linkModalProperNoun = if justLink then "file" else "klank"
                                 }
