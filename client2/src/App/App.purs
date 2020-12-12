@@ -603,6 +603,13 @@ compile = do
                           -- H.liftEffect $ log res
                           H.modify_ (_ { compiledKlank = Just res })
                           H.liftEffect $ completelyUnsafeEval res
+                          -- start buffer cache hack
+                          prevBuffers <- H.gets _.buffers
+                          klank <- H.liftEffect getKlank
+                          ctx <- H.liftEffect makeAudioContext
+                          buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
+                          H.modify_ (_ { buffers = buffers })
+                          -- end buffer cache hack
                           _ <-
                             H.query
                               _xterm
