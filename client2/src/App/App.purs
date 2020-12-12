@@ -429,7 +429,7 @@ handleAction = case _ of
       )
     b64 <- H.liftEffect $ getB64 Nothing Just
     url <- H.liftEffect $ getUrl Nothing Just
-    klankUrl <- H.liftEffect $ getUrl Nothing Just
+    klankUrl <- H.liftEffect $ getKlankUrl Nothing Just
     k <- H.liftEffect $ getK
     c <- H.liftEffect $ getC
     ec <- H.liftEffect $ getEC
