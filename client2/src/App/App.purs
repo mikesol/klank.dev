@@ -26,7 +26,7 @@ import Data.Either (Either(..), either)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.HTTP.Method (Method(..))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), isNothing, maybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.String.Base64 (decode)
 import Data.Symbol (SProxy(..))
@@ -490,7 +490,7 @@ handleAction = case _ of
             H.liftEffect $ completelyUnsafeEval compiledKlank
             pure unit
         )
-    case (k || noterm) of
+    case (k || (noterm && isNothing klankUrl)) of
       true -> compile
       false -> pure unit
     if noterm then
