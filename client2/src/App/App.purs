@@ -19,15 +19,21 @@ import App.LinkModal (modal)
 import App.LoadingModal (loading)
 import App.XTermComponent (focus, setFontSize, writeText)
 import App.XTermComponent as XTermComponent
+import Control.Monad.State (class MonadState)
 import Control.Promise (Promise, toAffE)
 import Data.Argonaut (class EncodeJson, getField, toObject)
 import Data.Argonaut.Encode (encodeJson)
+import Data.Array as A
+import Data.DateTime.Instant (unInstant)
 import Data.Either (Either(..), either)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.HTTP.Method (Method(..))
-import Data.Maybe (Maybe(..), isNothing, maybe)
+import Data.Int (toNumber)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
+import Data.Newtype (unwrap)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
+import Data.String as S
 import Data.String.Base64 (decode)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse)
@@ -36,7 +42,10 @@ import Effect (Effect)
 import Effect.Aff (Aff, launchAff_, makeAff, try)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
+import Effect.Class.Console (log)
 import Effect.Exception (Error, throw)
+import Effect.Now (now)
+import Effect.Timer (clearInterval, setInterval)
 import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, MediaRecorder, RecorderSignature, audioWorkletAddModule, makeAudioContext)
 import Foreign (Foreign)
 import Foreign.Object (Object)
@@ -47,6 +56,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.Query.EventSource (Finalizer(..))
 import Halogen.Query.EventSource as ES
 import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
@@ -113,9 +123,11 @@ data MainDisplay
 type State
   = { editorText :: String
     , isPlaying :: Maybe Boolean
+    , downloadProgress :: Maybe Number
     , compiledKlank :: Maybe String
     , mainDisplay :: MainDisplay
     , stopFn :: Maybe (Effect Unit)
+    , progressSubscriptionId :: Maybe SubscriptionId
     , audioCtx :: Maybe AudioContext
     , initialAccumulator :: Maybe Foreign
     , klankShouldWork :: Boolean
@@ -211,7 +223,9 @@ component =
           , compiledKlank: Nothing
           , mainDisplay: EditorDisplay
           , stopFn: Nothing
+          , progressSubscriptionId: Nothing
           , audioCtx: Nothing
+          , downloadProgress: Nothing
           , loadingModalOpen: true
           , linkModalOpen: false
           , showTerminal: true
@@ -272,6 +286,7 @@ render { editorText
 , showTerminal
 , isPlaying
 , downloadLinks
+, downloadProgress
 , noStop
 } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
@@ -348,6 +363,8 @@ render { editorText
           }
       , loading
           { open: loadingModalOpen
+          , progressSoFar: fromMaybe 0.0 downloadProgress
+          , progressMax: 100.0
           }
       ]
         <> ( if (not showTerminal && not loadingModalOpen && not playModalOpen && not noStop) then
@@ -406,6 +423,39 @@ simplGetr txt = do
       result
   pure opt
 
+calcSlope :: Number -> Number -> Number -> Number -> Number -> Number
+calcSlope x0 y0 x1 y1 x =
+  if x1 == x0 || y1 == y0 then
+    y0
+  else
+    let
+      m = (y1 - y0) / (x1 - x0)
+
+      b = y0 - m * x0
+    in
+      m * x + b
+
+bindBetween :: Number -> Number -> Number -> Number
+bindBetween mn mx n = max mn (min mx n)
+
+triggerProgressLoader :: forall o m. MonadAff m => Int -> Boolean -> H.HalogenM State Action ChildSlots o m Unit
+triggerProgressLoader nLines isCompiled = do
+  let
+    totalDur = 5.0 * (toNumber nLines) / (if isCompiled then 2000.0 else 1000.0)
+  subId <-
+    H.subscribe
+      $ ES.effectEventSource \emitter -> do
+          startTime <- ((_ / 1000.0) <<< unwrap <<< unInstant) <$> now
+          iid <-
+            H.liftEffect
+              $ setInterval 100 do
+                  currentTime <- ((_ / 1000.0) <<< unwrap <<< unInstant) <$> now
+                  let
+                    updatedProgress = bindBetween 0.0 95.0 $ calcSlope startTime 0.0 (startTime + totalDur) 95.0 currentTime
+                  ES.emit emitter (ProgressUpdate updatedProgress)
+          pure $ Finalizer (H.liftEffect $ clearInterval iid)
+  H.modify_ (_ { progressSubscriptionId = Just subId })
+
 handleAction :: forall o m. MonadAff m => Action -> H.HalogenM State Action ChildSlots o m Unit
 handleAction = case _ of
   PlayKlankFromModal -> do
@@ -413,6 +463,8 @@ handleAction = case _ of
     playKlank
   PlayKlankFromPlayButton -> do
     playKlank
+  ProgressUpdate n -> do
+    H.modify_ (_ { downloadProgress = Just n })
   PlayKlankFromStopButton -> do
     stopper
     H.modify_ (_ { isPlaying = Just false })
@@ -479,6 +531,7 @@ handleAction = case _ of
             editorText <- simplGetr txt
             H.modify_ (_ { editorText = editorText })
             _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
+            triggerProgressLoader (A.length (S.split (S.Pattern "\n") editorText)) (isJust klankUrl)
             pure unit
         )
     case klankUrl of
@@ -488,6 +541,7 @@ handleAction = case _ of
             compiledKlank <- simplGetr txt
             H.modify_ (_ { compiledKlank = Just compiledKlank })
             H.liftEffect $ completelyUnsafeEval compiledKlank
+            bufferCacheHack
             pure unit
         )
     case (k || (noterm && isNothing klankUrl)) of
@@ -504,6 +558,9 @@ handleAction = case _ of
       )
     else
       H.modify_ (_ { loadingModalOpen = false })
+    sid <- H.gets _.progressSubscriptionId
+    H.modify_ (_ { progressSubscriptionId = Nothing })
+    maybe (pure unit) H.unsubscribe sid
     pure mempty
   PlayStartSucceeded playerInfo -> do
     H.modify_
@@ -544,6 +601,14 @@ stopper = do
   H.modify_ (_ { stopFn = Nothing, audioCtx = Nothing, playerSubscriptionId = Nothing })
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
+
+bufferCacheHack :: ∀ t168 t175. Bind t168 ⇒ MonadState { buffers :: Object BrowserAudioBuffer | t175 } t168 ⇒ MonadEffect t168 ⇒ MonadAff t168 ⇒ t168 Unit
+bufferCacheHack = do
+  prevBuffers <- H.gets _.buffers
+  klank <- H.liftEffect getKlank
+  ctx <- H.liftEffect makeAudioContext
+  buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
+  H.modify_ (_ { buffers = buffers })
 
 compile :: ∀ t119 t123 t124 t125 t140 t293. MonadEffect t123 => MonadAff t123 => H.HalogenM State t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
 compile = do
@@ -603,13 +668,8 @@ compile = do
                           -- H.liftEffect $ log res
                           H.modify_ (_ { compiledKlank = Just res })
                           H.liftEffect $ completelyUnsafeEval res
-                          -- start buffer cache hack
-                          prevBuffers <- H.gets _.buffers
-                          klank <- H.liftEffect getKlank
-                          ctx <- H.liftEffect makeAudioContext
-                          buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
-                          H.modify_ (_ { buffers = buffers })
-                          -- end buffer cache hack
+                          -- fill the buffer cache on compile
+                          bufferCacheHack
                           _ <-
                             H.query
                               _xterm
