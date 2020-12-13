@@ -42,7 +42,6 @@ import Effect (Effect)
 import Effect.Aff (Aff, launchAff_, makeAff, try)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
-import Effect.Class.Console (log)
 import Effect.Exception (Error, throw)
 import Effect.Now (now)
 import Effect.Timer (clearInterval, setInterval)
@@ -440,8 +439,17 @@ bindBetween mn mx n = max mn (min mx n)
 
 triggerProgressLoader :: forall o m. MonadAff m => Int -> Boolean -> H.HalogenM State Action ChildSlots o m Unit
 triggerProgressLoader nLines isCompiled = do
+  os <- H.liftEffect $ getOS Nothing Just MacOS IOS Windows Android Linux
   let
-    totalDur = 5.0 * (toNumber nLines) / (if isCompiled then 2000.0 else 1000.0)
+    totalDur =
+      ( case os of
+          Nothing -> 5.0
+          Just MacOS -> 10.0
+          Just Android -> 10.0
+          Just _ -> 5.0
+      )
+        * (toNumber nLines)
+        / (if isCompiled then 2000.0 else 1000.0)
   subId <-
     H.subscribe
       $ ES.effectEventSource \emitter -> do
