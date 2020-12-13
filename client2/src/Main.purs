@@ -1,6 +1,7 @@
 module Main where
 
 import Prelude
+import App.App (noDice)
 import App.App as App
 import App.ClickPlayModal as ClickPlayModal
 import App.LoadingModal as LoadingModal
@@ -11,6 +12,9 @@ import Foreign.Object as Object
 import Halogen (Component, ComponentSlot)
 import Halogen as H
 import Halogen.Aff as HA
+import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
 import Halogen.Storybook (Stories, runStorybook, proxy)
 import Halogen.VDom.Driver (runUI)
 
@@ -32,6 +36,21 @@ loadingRender pgrs render =
         H.mkEval H.defaultEval
     }
 
+noDiceStory :: ∀ t26 t27 t64 t67. Component HH.HTML t67 t64 t27 t26
+noDiceStory =
+  H.mkComponent
+    { initialState: \_ -> {}
+    , render:
+        \_ ->
+          HH.div [ HP.classes $ map HH.ClassName [ "h-screen", "w-screen" ] ]
+            [ HH.div
+                [ HP.classes $ map HH.ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
+                noDice
+            ]
+    , eval:
+        H.mkEval H.defaultEval
+    }
+
 stories :: forall m. Stories m
 stories =
   Object.fromFoldable
@@ -40,6 +59,7 @@ stories =
     , Tuple "loading 0%" $ proxy (loadingRender 0.0 LoadingModal.loading)
     , Tuple "loading 95%" $ proxy (loadingRender 95.0 LoadingModal.loading)
     , Tuple "play" $ proxy (playRender ClickPlayModal.clickPlay)
+    , Tuple "no dice" $ proxy noDiceStory
     ]
 
 main :: Effect Unit

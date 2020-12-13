@@ -273,6 +273,26 @@ editorDisplay editorText =
     }
     (Just <<< HandleAceUpdate)
 
+noDice :: ∀ t119 t120. Array (HH.HTML t120 t119)
+noDice =
+  [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
+      [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+      , HH.div [ HP.classes $ map ClassName [ "w-full", "flex", "flex-row", "flex-none" ] ]
+          [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+          , HH.div [ HP.classes $ map ClassName [ "flex-none" ] ]
+              [ HH.p
+                  [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
+                  ]
+                  [ HH.text "Drats!" ]
+              , HH.p [] [ HH.text "klank.dev does not work on this browser." ]
+              , HH.p [] [ HH.text "Please open this link in ", HH.a [ HP.classes $ map ClassName [ "underline" ], HP.href "https://www.mozilla.org/en-US/firefox/new/" ] [ HH.text "Firefox" ], HH.text " or ", HH.a [ HP.classes $ map ClassName [ "underline" ], HP.href "https://www.google.com/chrome/" ] [ HH.text "Chrome" ], HH.text " to listen!" ]
+              ]
+          , HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+          ]
+      , HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+      ]
+  ]
+
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
 render { editorText
 , mainDisplay
@@ -292,14 +312,7 @@ render { editorText
     ( [ HH.div
           [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
           ( if (not klankShouldWork) then
-              ( [ HH.p
-                    [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
-                    ]
-                    [ HH.text "Drats!" ]
-                , HH.p [] [ HH.text "klank.dev only works on Firefox :(" ]
-                , HH.p [] [ HH.text "Please open this link in ", HH.a [ HP.href "https://www.mozilla.org/en-US/firefox/new/" ] [ HH.text "Firefox" ], HH.text " to listen to the klank." ]
-                ]
-              )
+              noDice
             else
               ( join
                   [ [ HH.div [ HP.classes $ map ClassName [ "flex", "flex-grow" ] ] case mainDisplay of
@@ -385,7 +398,15 @@ render { editorText
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
 
-foreign import isThisFirefox :: Effect Boolean
+data KlankBrowser
+  = Opera
+  | Firefox
+  | Safari
+  | IE
+  | Edge
+  | Chrome
+  | EdgeChromium
+  | Blink
 
 data KlankOS
   = MacOS
@@ -396,7 +417,15 @@ data KlankOS
 
 derive instance eqKlankOS :: Eq KlankOS
 
-foreign import getOS :: Maybe KlankOS -> (KlankOS -> Maybe KlankOS) -> KlankOS -> KlankOS -> KlankOS -> KlankOS -> KlankOS -> Effect (Maybe KlankOS)
+foreign import getOS_ :: Maybe KlankOS -> (KlankOS -> Maybe KlankOS) -> KlankOS -> KlankOS -> KlankOS -> KlankOS -> KlankOS -> Effect (Maybe KlankOS)
+
+getOS :: Effect (Maybe KlankOS)
+getOS = getOS_ Nothing Just MacOS IOS Windows Android Linux
+
+foreign import getBrowser_ :: Maybe KlankBrowser -> (KlankBrowser -> Maybe KlankBrowser) -> KlankBrowser -> KlankBrowser -> KlankBrowser -> KlankBrowser -> KlankBrowser -> KlankBrowser -> KlankBrowser -> KlankBrowser -> Effect (Maybe KlankBrowser)
+
+getBrowser :: Effect (Maybe KlankBrowser)
+getBrowser = getBrowser_ Nothing Just Opera Firefox Safari IE Edge Chrome EdgeChromium Blink
 
 foreign import loadCustomAudioNodes :: AudioContext -> Effect (Promise Unit)
 
@@ -439,7 +468,7 @@ bindBetween mn mx n = max mn (min mx n)
 
 triggerProgressLoader :: forall o m. MonadAff m => Int -> Boolean -> H.HalogenM State Action ChildSlots o m Unit
 triggerProgressLoader nLines isCompiled = do
-  os <- H.liftEffect $ getOS Nothing Just MacOS IOS Windows Android Linux
+  os <- H.liftEffect getOS
   let
     totalDur =
       ( case os of
@@ -479,97 +508,108 @@ handleAction = case _ of
   CloseLinkModal -> do
     H.modify_ (_ { linkModalOpen = false })
   Initialize -> do
-    isFF <- H.liftEffect $ isThisFirefox
-    os <- H.liftEffect $ getOS Nothing Just MacOS IOS Windows Android Linux
+    browser <- H.liftEffect getBrowser
+    os <- H.liftEffect getOS
     force <- H.liftEffect $ getForce
+    let
+      klankShouldWork =
+        force
+          || ( case os, browser of
+                _, Just Safari -> false
+                Just Linux, Just Chrome -> false
+                _, _ -> true
+            )
     H.modify_
       ( _
-          { klankShouldWork = (not (not isFF && os == (Just Linux))) || force
+          { klankShouldWork = klankShouldWork
           }
       )
-    b64 <- H.liftEffect $ getB64 Nothing Just
-    url <- H.liftEffect $ getUrl Nothing Just
-    klankUrl <- H.liftEffect $ getKlankUrl Nothing Just
-    k <- H.liftEffect $ getK
-    c <- H.liftEffect $ getC
-    ec <- H.liftEffect $ getEC
-    noterm <- H.liftEffect $ getNoterm
-    nostop <- H.liftEffect $ getNostop
-    when noterm
-      ( do
-          H.modify_
-            ( _
-                { showTerminal = false
-                , noStop = nostop
-                , mainDisplay = CanvasDisplay
-                }
-            )
-          H.liftEffect canvasDimensionHack
-      )
-    initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
-    when ec
-      ( do
-          H.modify_ (_ { mainDisplay = SplitDisplay })
-          H.liftEffect canvasDimensionHack
-      )
-    when c
-      ( do
-          H.modify_ (_ { mainDisplay = CanvasDisplay })
-          H.liftEffect canvasDimensionHack
-      )
-    H.modify_ (_ { initialAccumulator = initialAccumulator })
-    case b64 of
-      Nothing -> pure unit
-      Just txt ->
-        ( do
-            let
-              editorText' = decode txt
-            either (const $ pure unit)
-              ( \editorText -> do
-                  H.modify_ (_ { editorText = editorText })
-                  _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
-                  pure unit
-              )
-              editorText'
-        )
-    case url of
-      Nothing -> pure unit
-      Just txt ->
-        ( do
-            editorText <- simplGetr txt
-            H.modify_ (_ { editorText = editorText })
-            _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
-            triggerProgressLoader (A.length (S.split (S.Pattern "\n") editorText)) (isJust klankUrl)
-            pure unit
-        )
-    case klankUrl of
-      Nothing -> pure unit
-      Just txt ->
-        ( do
-            compiledKlank <- simplGetr txt
-            H.modify_ (_ { compiledKlank = Just compiledKlank })
-            H.liftEffect $ completelyUnsafeEval compiledKlank
-            bufferCacheHack
-            pure unit
-        )
-    case (k || (noterm && isNothing klankUrl)) of
-      true -> compile
-      false -> pure unit
-    if noterm then
-      ( do
-          H.modify_
-            ( _
-                { playModalOpen = true
-                , loadingModalOpen = false
-                }
-            )
-      )
-    else
+    if (not klankShouldWork) then
       H.modify_ (_ { loadingModalOpen = false })
-    sid <- H.gets _.progressSubscriptionId
-    H.modify_ (_ { progressSubscriptionId = Nothing })
-    maybe (pure unit) H.unsubscribe sid
-    pure mempty
+    else do
+      b64 <- H.liftEffect $ getB64 Nothing Just
+      url <- H.liftEffect $ getUrl Nothing Just
+      klankUrl <- H.liftEffect $ getKlankUrl Nothing Just
+      k <- H.liftEffect $ getK
+      c <- H.liftEffect $ getC
+      ec <- H.liftEffect $ getEC
+      noterm <- H.liftEffect $ getNoterm
+      nostop <- H.liftEffect $ getNostop
+      when noterm
+        ( do
+            H.modify_
+              ( _
+                  { showTerminal = false
+                  , noStop = nostop
+                  , mainDisplay = CanvasDisplay
+                  }
+              )
+            H.liftEffect canvasDimensionHack
+        )
+      initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
+      when ec
+        ( do
+            H.modify_ (_ { mainDisplay = SplitDisplay })
+            H.liftEffect canvasDimensionHack
+        )
+      when c
+        ( do
+            H.modify_ (_ { mainDisplay = CanvasDisplay })
+            H.liftEffect canvasDimensionHack
+        )
+      H.modify_ (_ { initialAccumulator = initialAccumulator })
+      case b64 of
+        Nothing -> pure unit
+        Just txt ->
+          ( do
+              let
+                editorText' = decode txt
+              either (const $ pure unit)
+                ( \editorText -> do
+                    H.modify_ (_ { editorText = editorText })
+                    _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
+                    pure unit
+                )
+                editorText'
+          )
+      case url of
+        Nothing -> pure unit
+        Just txt ->
+          ( do
+              editorText <- simplGetr txt
+              H.modify_ (_ { editorText = editorText })
+              _ <- H.query _ace Editor $ H.tell (AceComponent.ChangeText editorText)
+              triggerProgressLoader (A.length (S.split (S.Pattern "\n") editorText)) (isJust klankUrl)
+              pure unit
+          )
+      case klankUrl of
+        Nothing -> pure unit
+        Just txt ->
+          ( do
+              compiledKlank <- simplGetr txt
+              H.modify_ (_ { compiledKlank = Just compiledKlank })
+              H.liftEffect $ completelyUnsafeEval compiledKlank
+              bufferCacheHack
+              pure unit
+          )
+      case (k || (noterm && isNothing klankUrl)) of
+        true -> compile
+        false -> pure unit
+      if noterm then
+        ( do
+            H.modify_
+              ( _
+                  { playModalOpen = true
+                  , loadingModalOpen = false
+                  }
+              )
+        )
+      else
+        H.modify_ (_ { loadingModalOpen = false })
+      sid <- H.gets _.progressSubscriptionId
+      H.modify_ (_ { progressSubscriptionId = Nothing })
+      maybe (pure unit) H.unsubscribe sid
+      pure mempty
   PlayStartSucceeded playerInfo -> do
     H.modify_
       ( _
