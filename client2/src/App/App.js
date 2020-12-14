@@ -17,6 +17,16 @@ exports.getUrl = function (nothing) {
     };
   };
 };
+
+exports.getKlankUrl = function (nothing) {
+  return function (just) {
+    return function () {
+      var urlParams = new URLSearchParams(window.location.search);
+      var myParam = urlParams.get("klank");
+      return myParam ? just(myParam) : nothing;
+    };
+  };
+};
 exports.getInitialAccumulator = function (nothing) {
   return function (just) {
     return function () {
@@ -34,7 +44,7 @@ exports.getInitialAccumulator = function (nothing) {
   };
 };
 
-exports.getOS = function (nothing) {
+exports.getOS_ = function (nothing) {
   return function (just) {
     return function (macos) {
       return function (ios) {
@@ -108,8 +118,70 @@ exports.getEC = function () {
   return myParam === null || myParam === "false" ? false : true;
 };
 
-exports.isThisFirefox = function () {
-  return typeof InstallTrigger !== "undefined";
+exports.getBrowser_ = function (nothing) {
+  return function (just) {
+    return function (opera) {
+      return function (firefox) {
+        return function (safari) {
+          return function (ie) {
+            return function (edge) {
+              return function (chrome) {
+                return function (edgeChromium) {
+                  return function (blink) {
+                    return function () {
+                      // Opera 8.0+
+                      var isOpera =
+                        (!!window.opr && !!opr.addons) ||
+                        !!window.opera ||
+                        navigator.userAgent.indexOf(" OPR/") >= 0;
+                      if (isOpera) return just(opera);
+                      // Firefox 1.0+
+                      var isFirefox = typeof InstallTrigger !== "undefined";
+                      if (isFirefox) return just(firefox);
+                      // Safari 3.0+ "[object HTMLElementConstructor]"
+                      var isSafari =
+                        /constructor/i.test(window.HTMLElement) ||
+                        (function (p) {
+                          return (
+                            p.toString() === "[object SafariRemoteNotification]"
+                          );
+                        })(
+                          !window["safari"] ||
+                            (typeof safari !== "undefined" &&
+                              window["safari"].pushNotification)
+                        );
+                      if (isSafari) return just(safari);
+
+                      // Internet Explorer 6-11
+                      var isIE = /*@cc_on!@*/ false || !!document.documentMode;
+                      if (isIE) return just(ie);
+                      // Edge 20+
+                      var isEdge = !isIE && !!window.StyleMedia;
+                      if (isEdge) return just(edge);
+                      // Chrome 1 - 79
+                      var isChrome =
+                        !!window.chrome &&
+                        (!!window.chrome.webstore || !!window.chrome.runtime);
+                      if (isChrome) return just(chrome);
+                      // Edge (based on chromium) detection
+                      var isEdgeChromium =
+                        isChrome && navigator.userAgent.indexOf("Edg") != -1;
+                      if (isEdgeChromium) return just(edgeChromium);
+
+                      // Blink engine detection
+                      var isBlink = (isChrome || isOpera) && !!window.CSS;
+                      if (isBlink) return just(blink);
+                      return nothing;
+                    };
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
 };
 
 exports.escape = function (s) {

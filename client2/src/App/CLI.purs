@@ -17,6 +17,7 @@ data CLI
   | Compile
   | Link
   | LinkNoTerm
+  | LinkCompiledKlank
   | Upload
   | FileLink
   | Downloads
@@ -30,6 +31,7 @@ cli =
     <|> try play
     <|> try stop
     <|> try downloads
+    <|> try linkCompiledKlank
     <|> try linkNoTerm
     <|> try upload
     <|> try link
@@ -44,6 +46,9 @@ link = (try $ string "link" <|> string "l") *> pure Link
 
 linkNoTerm ∷ ∀ s. StringLike s ⇒ Parser s CLI
 linkNoTerm = (string "lnt") *> pure LinkNoTerm
+
+linkCompiledKlank ∷ ∀ s. StringLike s ⇒ Parser s CLI
+linkCompiledKlank = (string "lk") *> pure LinkCompiledKlank
 
 fileLink ∷ ∀ s. StringLike s ⇒ Parser s CLI
 fileLink = (try $ string "flink" <|> string "fl") *> pure FileLink

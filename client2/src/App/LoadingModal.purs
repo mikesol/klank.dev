@@ -7,8 +7,11 @@ import Halogen (ClassName(..))
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 
-loading :: forall w. { open :: Boolean } -> HH.HTML w Action
-loading { open } =
+progressValue :: forall r i. Number -> HH.IProp ( value :: Number | r ) i
+progressValue = HH.prop (HH.PropName "value")
+
+loading :: forall w. { progressSoFar :: Number, progressMax :: Number, open :: Boolean } -> HH.HTML w Action
+loading { open, progressSoFar, progressMax } =
   HH.div
     [ HP.classes $ map ClassName ([ "modal", "fixed", "w-full", "h-full", "top-0", "left-0", "flex", "items-center", "justify-center" ] <> if open then [] else [ "opacity-0", "pointer-events-none" ])
     ]
@@ -29,7 +32,7 @@ loading { open } =
                     [ HH.text "You've found klank.dev! 🎤🎧🔊" ]
                 ]
             , modalBody [ HH.text "Loading..." ]
-            , modalBody [ HH.text "Be right with you... ⏳" ]
+            , modalBody [ HH.progress [ progressValue progressSoFar, HP.max 100.0, HP.classes $ map ClassName [ "w-full" ] ] [] ]
             ]
         ]
     ]

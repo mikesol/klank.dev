@@ -30,6 +30,7 @@ data Action
   | PlayKlankFromModal
   | PlayKlankFromPlayButton
   | PlayKlankFromStopButton
+  | ProgressUpdate Number
   | HandleAceUpdate AceComponent.Output
   | HandleTerminalUpdate XTermComponent.Output
   | HandleFileDrop DropzoneComponent.Output
