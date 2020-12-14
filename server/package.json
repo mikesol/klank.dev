@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "postinstall": "node perm.js && spago install && spago build && cd deps && spago install && spago build && cd ..",
+    "postinstall": "node perm.js && spago install && spago build",
     "build": "spago build",
     "test": "spago test"
   },
@@ -13,17 +13,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.771.0",
-    "body-parser": "^1.19.0",
-    "cors": "^2.8.5",
     "esbuild": "^0.7.8",
-    "express": "^4.17.1",
     "helmet": "^4.1.1",
     "mixpanel": "^0.13.0",
     "purescript": "^0.13.8",
     "spago": "^0.16.0"
   },
   "devDependencies": {
+    "aws-sdk": "^2.809.0",
     "prettier": "^2.2.1"
   }
 }

@@ -53,7 +53,7 @@ compiler { body } =
   bracket
     ( do
         uuid' <- liftEffect $ genUUID
-        whatHappened <-
+        _ <-
           spawn
             { args:
                 [ "-r"
@@ -64,7 +64,28 @@ compiler { body } =
             , stdin: Nothing
             }
             defaultSpawnOptions
-
+        _ <-
+          spawn
+            { args:
+                [ "-r"
+                , ".spago/"
+                , "/tmp/deps/.spago"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
+                [ "-r"
+                , "output/"
+                , "/tmp/deps/output"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
         _ <- liftEffect $ mkdir ("/tmp/deps/" <> (toString uuid'))
         pure (toString uuid')
     )
@@ -153,7 +174,7 @@ compiler { body } =
                 , "--minify"
                 , "--outfile=" <> uuid <> "/index.js"
                 ]
-            , cmd: "../node_modules/.bin/esbuild"
+            , cmd: "/var/task/node_modules/.bin/esbuild"
             , stdin: Nothing
             }
             defaultSpawnOptions
