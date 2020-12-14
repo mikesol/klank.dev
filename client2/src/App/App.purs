@@ -119,6 +119,11 @@ data MainDisplay
   | SplitDisplay
   | UploadDisplay
 
+data KlankError
+  = NoDiceSafari
+  | NoDiceIOS
+  | NoDiceLinuxChrome
+
 type State
   = { editorText :: String
     , isPlaying :: Maybe Boolean
@@ -129,7 +134,7 @@ type State
     , progressSubscriptionId :: Maybe SubscriptionId
     , audioCtx :: Maybe AudioContext
     , initialAccumulator :: Maybe Foreign
-    , klankShouldWork :: Boolean
+    , klankErrorCondition :: Maybe KlankError
     , worklets :: Array String
     , linkModalUrl :: String
     , loadingModalOpen :: Boolean
@@ -240,7 +245,7 @@ component =
           , downloadLinks: []
           , floatArrays: O.empty
           , periodicWaves: O.empty
-          , klankShouldWork: true
+          , klankErrorCondition: Nothing
           , playerSubscriptionId: Nothing
           }
     , render
@@ -273,8 +278,8 @@ editorDisplay editorText =
     }
     (Just <<< HandleAceUpdate)
 
-noDice :: ∀ t119 t120. Array (HH.HTML t120 t119)
-noDice =
+noDiceSafari :: ∀ t119 t120. Array (HH.HTML t120 t119)
+noDiceSafari =
   [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
       [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
       , HH.div [ HP.classes $ map ClassName [ "w-full", "flex", "flex-row", "flex-none" ] ]
@@ -293,12 +298,52 @@ noDice =
       ]
   ]
 
+noDiceLinuxChrome :: ∀ t119 t120. Array (HH.HTML t120 t119)
+noDiceLinuxChrome =
+  [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
+      [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+      , HH.div [ HP.classes $ map ClassName [ "w-full", "flex", "flex-row", "flex-none" ] ]
+          [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+          , HH.div [ HP.classes $ map ClassName [ "flex-none" ] ]
+              [ HH.p
+                  [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
+                  ]
+                  [ HH.text "Drats!" ]
+              , HH.p [] [ HH.text "klank.dev does not work on this browser." ]
+              , HH.p [] [ HH.text "Please open this link in ", HH.a [ HP.classes $ map ClassName [ "underline" ], HP.href "https://www.mozilla.org/en-US/firefox/new/" ] [ HH.text "Firefox" ], HH.text " to listen!" ]
+              ]
+          , HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+          ]
+      , HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+      ]
+  ]
+
+noDiceiOS :: ∀ t119 t120. Array (HH.HTML t120 t119)
+noDiceiOS =
+  [ HH.div [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
+      [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+      , HH.div [ HP.classes $ map ClassName [ "w-full", "flex", "flex-row", "flex-none" ] ]
+          [ HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+          , HH.div [ HP.classes $ map ClassName [ "flex-none" ] ]
+              [ HH.p
+                  [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
+                  ]
+                  [ HH.text "Drats!" ]
+              , HH.p [] [ HH.text "klank.dev does not work on iOS." ]
+              , HH.p [] [ HH.text "Please open this link from a computer or Android device to listen!" ]
+              ]
+          , HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+          ]
+      , HH.div [ HP.classes $ map ClassName [ "flex-grow" ] ] []
+      ]
+  ]
+
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
 render { editorText
 , mainDisplay
 , linkModalOpen
 , linkModalUrl
-, klankShouldWork
+, klankErrorCondition
 , linkModalProperNoun
 , loadingModalOpen
 , playModalOpen
@@ -311,61 +356,63 @@ render { editorText
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ]
     ( [ HH.div
           [ HP.classes $ map ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
-          ( if (not klankShouldWork) then
-              noDice
-            else
-              ( join
-                  [ [ HH.div [ HP.classes $ map ClassName [ "flex", "flex-grow" ] ] case mainDisplay of
-                        EditorDisplay -> [ editorDisplay editorText ]
-                        DownloadsDisplay ->
-                          [ HH.div
-                              [ HP.classes
-                                  $ map ClassName [ "h-full", "w-full" ]
-                              ]
-                              ( [ HH.p
-                                    [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
-                                    ]
-                                    [ HH.text "Download links" ]
-                                , HH.p [] [ HH.text "Below you can find links to downloadable files from the current session" ]
-                                , HH.ul [] (map (\(Tuple name url) -> HH.li [] [ HH.a [ HP.href url, HP.download name ] [ HH.text name ] ]) downloadLinks)
+          ( case klankErrorCondition of
+              Just NoDiceSafari -> noDiceSafari
+              Just NoDiceIOS -> noDiceiOS
+              Just NoDiceLinuxChrome -> noDiceLinuxChrome
+              Nothing ->
+                ( join
+                    [ [ HH.div [ HP.classes $ map ClassName [ "flex", "flex-grow" ] ] case mainDisplay of
+                          EditorDisplay -> [ editorDisplay editorText ]
+                          DownloadsDisplay ->
+                            [ HH.div
+                                [ HP.classes
+                                    $ map ClassName [ "h-full", "w-full" ]
                                 ]
-                              )
-                          ]
-                        UploadDisplay ->
-                          [ HH.slot _upload Uploader DropzoneComponent.component
-                              {}
-                              (Just <<< HandleFileDrop)
-                          ]
-                        CanvasDisplay ->
-                          [ HH.slot _canvas Canvas CanvasComponent.component
-                              {}
-                              absurd
-                          ]
-                        SplitDisplay ->
-                          [ HH.div [ HP.classes $ map ClassName [ "h-full", "flex-grow", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
-                              [ editorDisplay editorText
-                              , HH.slot _canvas Canvas CanvasComponent.component
-                                  {}
-                                  absurd
-                              ]
-                          ]
-                    ]
-                  , if showTerminal then
-                      [ HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
-                          [ HH.slot _xterm Terminal XTermComponent.component
-                              { terminalStyling:
-                                  \t -> do
-                                    setFontSize 20 t
-                                    writeText welcomeMsg t
-                                    focus t
-                              }
-                              (Just <<< HandleTerminalUpdate)
-                          ]
+                                ( [ HH.p
+                                      [ HP.classes $ map ClassName [ "text-2xl", "font-bold" ]
+                                      ]
+                                      [ HH.text "Download links" ]
+                                  , HH.p [] [ HH.text "Below you can find links to downloadable files from the current session" ]
+                                  , HH.ul [] (map (\(Tuple name url) -> HH.li [] [ HH.a [ HP.href url, HP.download name ] [ HH.text name ] ]) downloadLinks)
+                                  ]
+                                )
+                            ]
+                          UploadDisplay ->
+                            [ HH.slot _upload Uploader DropzoneComponent.component
+                                {}
+                                (Just <<< HandleFileDrop)
+                            ]
+                          CanvasDisplay ->
+                            [ HH.slot _canvas Canvas CanvasComponent.component
+                                {}
+                                absurd
+                            ]
+                          SplitDisplay ->
+                            [ HH.div [ HP.classes $ map ClassName [ "h-full", "flex-grow", "w-full", "grid", "grid-cols-2", "grid-rows-1", "gap-0" ] ]
+                                [ editorDisplay editorText
+                                , HH.slot _canvas Canvas CanvasComponent.component
+                                    {}
+                                    absurd
+                                ]
+                            ]
                       ]
-                    else
-                      []
-                  ]
-              )
+                    , if showTerminal then
+                        [ HH.div [ HP.classes $ map ClassName [ "flex-grow-0" ] ]
+                            [ HH.slot _xterm Terminal XTermComponent.component
+                                { terminalStyling:
+                                    \t -> do
+                                      setFontSize 20 t
+                                      writeText welcomeMsg t
+                                      focus t
+                                }
+                                (Just <<< HandleTerminalUpdate)
+                            ]
+                        ]
+                      else
+                        []
+                    ]
+                )
           )
       , modal
           { url: linkModalUrl, open: linkModalOpen, properNoun: linkModalProperNoun
@@ -512,19 +559,22 @@ handleAction = case _ of
     os <- H.liftEffect getOS
     force <- H.liftEffect $ getForce
     let
-      klankShouldWork =
-        force
-          || ( case os, browser of
-                _, Just Safari -> false
-                Just Linux, Just Chrome -> false
-                _, _ -> true
-            )
+      klankErrorCondition =
+        if force then
+          Nothing
+        else
+          ( case os, browser of
+              _, Just Safari -> Just NoDiceSafari
+              Just Linux, Just Chrome -> Just NoDiceLinuxChrome
+              Just IOS, _ -> Just NoDiceIOS
+              _, _ -> Nothing
+          )
     H.modify_
       ( _
-          { klankShouldWork = klankShouldWork
+          { klankErrorCondition = klankErrorCondition
           }
       )
-    if (not klankShouldWork) then
+    if (isJust klankErrorCondition) then
       H.modify_ (_ { loadingModalOpen = false })
     else do
       b64 <- H.liftEffect $ getB64 Nothing Just
