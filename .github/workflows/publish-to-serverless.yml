@@ -16,7 +16,5 @@ jobs:
           node-version: "12"
       - name: install serverless
         run: npm install -g serverless
-      - name: npm install
-        run: npm install
-      - name: serverless deploy
-        run: serverless deploy --stage prod
+      - name: install and deploy
+        run: cd server && npm install && serverless deploy --stage prod
