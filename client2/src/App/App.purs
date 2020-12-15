@@ -732,7 +732,7 @@ compile = do
             $ H.tell (XTermComponent.ChangeText $ "\r\nCompiling. Please be patient.\r\nThis should take 2-8 seconds depending on your internet connection speed.")
         response <-
           H.liftAff
-            $ AX.post AXRF.json url (Just (RequestBody.json $ encodeJson { code }))
+            $ AX.post AXRF.json (url <> "compile") (Just (RequestBody.json $ encodeJson { code }))
         either
           ( const do
               _ <-

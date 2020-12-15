@@ -1,0 +1,22 @@
+name: Publishes to serverless
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+      - name: install serverless
+        run: npm install -g serverless
+      - name: npm install
+        run: npm install
+      - name: serverless deploy
+        run: serverless deploy --stage prod
