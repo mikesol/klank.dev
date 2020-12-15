@@ -1,7 +1,7 @@
 module Main where
 
 import Prelude
-import App.App (noDice)
+import App.App (noDiceSafari)
 import App.App as App
 import App.ClickPlayModal as ClickPlayModal
 import App.LoadingModal as LoadingModal
@@ -36,8 +36,8 @@ loadingRender pgrs render =
         H.mkEval H.defaultEval
     }
 
-noDiceStory :: ∀ t26 t27 t64 t67. Component HH.HTML t67 t64 t27 t26
-noDiceStory =
+noDiceSafariStory :: ∀ t26 t27 t64 t67. Component HH.HTML t67 t64 t27 t26
+noDiceSafariStory =
   H.mkComponent
     { initialState: \_ -> {}
     , render:
@@ -45,7 +45,7 @@ noDiceStory =
           HH.div [ HP.classes $ map HH.ClassName [ "h-screen", "w-screen" ] ]
             [ HH.div
                 [ HP.classes $ map HH.ClassName [ "h-full", "w-full", "flex", "flex-col" ] ]
-                noDice
+                noDiceSafari
             ]
     , eval:
         H.mkEval H.defaultEval
@@ -59,7 +59,7 @@ stories =
     , Tuple "loading 0%" $ proxy (loadingRender 0.0 LoadingModal.loading)
     , Tuple "loading 95%" $ proxy (loadingRender 95.0 LoadingModal.loading)
     , Tuple "play" $ proxy (playRender ClickPlayModal.clickPlay)
-    , Tuple "no dice" $ proxy noDiceStory
+    , Tuple "no dice" $ proxy noDiceSafariStory
     ]
 
 main :: Effect Unit
