@@ -12,8 +12,8 @@ provider:
 
 functions:
   compile-klank:
-    timeout: 60
-    handler: handler.handler
+    timeout: 29
+    handler: compile.handler
     events:
       - http:
           method: post
@@ -21,3 +21,23 @@ functions:
           cors: true
     environment:
       MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
+  upload-file:
+    timeout: 29
+    handler: ufile.handler
+    events:
+      - http:
+          method: post
+          path: u
+          cors: true
+    environment:
+      MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
+    upload-klank:
+      timeout: 29
+      handler: uklank.handler
+      events:
+        - http:
+            method: post
+            path: uk
+            cors: true
+      environment:
+        MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
