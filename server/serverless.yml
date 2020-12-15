@@ -11,13 +11,10 @@ provider:
   memorySize: 4096
   iamRoleStatements:
     - Effect: "Allow"
-      Action: "s3:ListBucket"
+      Action: "s3:*"
       Resource: "arn:aws:s3:::klank-share"
     - Effect: "Allow"
-      Action: "s3:PutObject"
-      Resource: "arn:aws:s3:::klank-share/*"
-    - Effect: "Allow"
-      Action: "s3:GetObject"
+      Action: "s3:*"
       Resource: "arn:aws:s3:::klank-share/*"
 
 functions:

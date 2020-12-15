@@ -53,7 +53,8 @@ compiler { body } =
   bracket
     ( do
         uuid' <- liftEffect $ genUUID
-        _ <- liftEffect $ mkdir ("/tmp/deps")
+        exts <- liftEffect $ exists ("/tmp/deps")
+        _ <- liftEffect $ when (not exts) (mkdir ("/tmp/deps"))
         _ <-
           spawn
             { args:
