@@ -1,5 +1,6 @@
-var ps = require("./output/Main/");
 var Mixpanel = require("mixpanel");
+var AWS = require("aws-sdk");
+var s3 = new AWS.S3();
 
 var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
   host: "api-eu.mixpanel.com",

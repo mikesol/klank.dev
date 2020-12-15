@@ -9,6 +9,16 @@ provider:
   runtime: nodejs12.x
   region: us-east-1
   memorySize: 4096
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action: "s3:ListBucket"
+      Resource: "arn:aws:s3:::klank-share"
+    - Effect: "Allow"
+      Action: "s3:PutObject"
+      Resource: "arn:aws:s3:::klank-share/*"
+    - Effect: "Allow"
+      Action: "s3:GetObject"
+      Resource: "arn:aws:s3:::klank-share/*"
 
 functions:
   compile-klank:
@@ -31,13 +41,13 @@ functions:
           cors: true
     environment:
       MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
-    upload-klank:
-      timeout: 29
-      handler: uklank.handler
-      events:
-        - http:
-            method: post
-            path: uk
-            cors: true
-      environment:
-        MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
+  upload-klank:
+    timeout: 29
+    handler: uklank.handler
+    events:
+      - http:
+          method: post
+          path: uk
+          cors: true
+    environment:
+      MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
