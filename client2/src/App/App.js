@@ -197,12 +197,7 @@ exports.canvasDimensionHack = function () {
 exports.serverUrl = function () {
   return process.env.SERVER_URI;
 };
-exports.firebaseUrl = function () {
-  return process.env.FIREBASE_URL;
-};
-exports.firebaseToken = function () {
-  return process.env.FIREBASE_TOKEN;
-};
+
 exports.completelyUnsafeEval = function (s) {
   return function () {
     eval(s);

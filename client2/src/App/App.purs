@@ -7,7 +7,6 @@ import Ace.Editor as Editor
 import Affjax as AX
 import Affjax.RequestBody as RequestBody
 import Affjax.ResponseFormat as AXRF
-import Affjax.StatusCode (StatusCode(..))
 import App.AceComponent as AceComponent
 import App.AppAction (Action(..))
 import App.CLI as CLI
@@ -65,10 +64,6 @@ import Web.File.File as WF
 foreign import data BrowserMicrophone :: Type
 
 foreign import serverUrl :: Effect String
-
-foreign import firebaseUrl :: Effect String
-
-foreign import firebaseToken :: Effect String
 
 foreign import getK :: Effect Boolean
 
@@ -915,7 +910,6 @@ makeUploadLink linkType code = do
 -- todo - avoid Firebase call for extra link
 makeLink :: ∀ m t723 t724. MonadEffect m => MonadAff m => Boolean -> Boolean -> LinkType -> H.HalogenM State t724 ChildSlots t723 m Unit
 makeLink noTerm justLink linkType = do
-  url <- H.liftEffect firebaseUrl
   txt_ <- H.query _ace Editor $ H.request AceComponent.GetText
   maybe
     ( do
@@ -945,80 +939,26 @@ makeLink noTerm justLink linkType = do
                 Just <$> makeUploadLink FromCompiledKlank compiled
           )
         ----
-        firebaseT <- H.liftEffect firebaseToken
-        response <-
-          H.liftAff
-            $ AX.request
-                ( AX.defaultRequest
-                    { headers = []
-                    , method = Left POST
-                    , url = url <> "?key=" <> firebaseT
-                    , content =
-                      ( Just
-                          ( RequestBody.json
-                              $ encodeJson
-                                  { dynamicLinkInfo:
-                                      -- mx@
-                                      { domainUriPrefix: "https://link.klank.dev"
-                                      , link:
-                                          "https://klank.dev/?" <> (if noTerm then "noterm" else "k") <> "&url="
-                                            <> _codeUploadLink
-                                            <> ( case _compiledUploadLink of
-                                                  Nothing -> mempty
-                                                  Just x -> "&klank=" <> x
-                                              )
-                                      }
-                                  }
-                          )
-                      )
-                    , responseFormat = AXRF.json
-                    }
+        let
+          link =
+            "https://klank.dev/?" <> (if noTerm then "noterm" else "k") <> "&url="
+              <> _codeUploadLink
+              <> ( case _compiledUploadLink of
+                    Nothing -> mempty
+                    Just x -> "&klank=" <> x
                 )
-        either
-          ( const do
-              _ <-
-                H.query
-                  _xterm
-                  Terminal
-                  $ H.tell (XTermComponent.ChangeText $ "\r\nThe link shortening server is either down or overloaded. Try again, and if your request doesn't work a second time, please file a bug. Sorry!\r\n$ ")
-              pure unit
+        H.modify_
+          ( _
+              { linkModalUrl = if justLink then _codeUploadLink else link
+              , linkModalOpen = true
+              , linkModalProperNoun = if justLink then "file" else "klank"
+              }
           )
-          ( \{ status: (StatusCode sc), body } -> do
-              let
-                body' = toObject body
-              maybe (pure unit)
-                ( \body'' -> do
-                    let
-                      link_ = getField body'' "shortLink"
-                    maybe
-                      ( do
-                          _ <-
-                            H.query
-                              _xterm
-                              Terminal
-                              $ H.tell (XTermComponent.ChangeText $ "\r\nSorry, we couldn't create a link. Please try again later.\r\n$ ")
-                          pure unit
-                      )
-                      ( \res -> do
-                          H.modify_
-                            ( _
-                                { linkModalUrl = if justLink then _codeUploadLink else res
-                                , linkModalOpen = true
-                                , linkModalProperNoun = if justLink then "file" else "klank"
-                                }
-                            )
-                          _ <-
-                            H.query
-                              _xterm
-                              Terminal
-                              $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
-                          pure unit
-                      )
-                      ((either (const Nothing) Just link_) >>= \x -> if (sc >= 400) then Nothing else Just x)
-                )
-                body'
-          )
-          response
+        _ <-
+          H.query
+            _xterm
+            Terminal
+            $ H.tell (XTermComponent.ChangeText $ "\r\n$ ")
         pure unit
     )
     txt_
