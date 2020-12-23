@@ -18,11 +18,9 @@ exports.handler = function (event, context, callback) {
   if (!tops.code || typeof tops.code !== "string") {
     throw new Error("Need string of PS code, got ", tops);
   }
-  mixpanel.track("Klank compiled");
   ps.compile({ body: tops })(function (r) {
     return function () {
-      console.log("successful completion");
-      console.log(r);
+      mixpanel.track("Klank compiled");
       callback(null, {
         statusCode: 200,
         headers: {
