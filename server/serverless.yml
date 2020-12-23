@@ -25,7 +25,7 @@ functions:
       - schedule:
           rate: rate(5 minutes)
           input:
-            body: '{"code":"module Klank.Dev where}"}'
+            body: '{"code":"module Klank.Dev where"}'
       - http:
           method: post
           path: compile

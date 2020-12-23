@@ -9,7 +9,13 @@ exports.handler = function (event, context, callback) {
   if (!event.body) {
     throw new Error("Need a body.");
   }
-  var tops = JSON.parse(event.body);
+  var tops = null;
+  try {
+    tops = JSON.parse(event.body);
+  } catch (e) {
+    console.log("Could not parse body :: ", event);
+    throw e;
+  }
   if (!tops.code) {
     throw new Error("Need code.");
   }
