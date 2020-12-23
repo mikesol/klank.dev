@@ -13,11 +13,10 @@ exports.handler = function (event, context, callback) {
   try {
     tops = JSON.parse(event.body);
   } catch (e) {
-    console.log("Could not parse body :: ", event);
-    throw e;
+    tops = event.body;
   }
-  if (!tops.code) {
-    throw new Error("Need code.");
+  if (!tops.code || typeof tops.code !== "string") {
+    throw new Error("Need string of PS code, got ", tops);
   }
   mixpanel.track("Klank compiled");
   ps.compile({ body: tops })(function (r) {
