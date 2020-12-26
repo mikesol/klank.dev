@@ -250,6 +250,7 @@ cmd =
   , ".spago/invariant/v4.1.0/src/**/*.purs"
   , ".spago/js-date/v6.0.0/src/**/*.purs"
   , ".spago/js-timers/v4.0.1/src/**/*.purs"
+  , ".spago/klank-dev-util/main/src/**/*.purs"
   , ".spago/lazy/v4.0.0/src/**/*.purs"
   , ".spago/lcg/v2.0.0/src/**/*.purs"
   , ".spago/lists/v5.4.1/src/**/*.purs"

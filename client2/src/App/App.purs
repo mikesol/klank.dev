@@ -60,6 +60,7 @@ import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
 import Web.File.File (File)
 import Web.File.File as WF
+import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
 
 foreign import data BrowserMicrophone :: Type
 
@@ -144,6 +145,9 @@ type State
     , buffers :: Object BrowserAudioBuffer
     , floatArrays :: Object BrowserFloatArray
     , periodicWaves :: Object BrowserPeriodicWave
+    , images :: Object HTMLImageElement
+    , videos :: Object HTMLVideoElement
+    , canvases :: Object HTMLCanvasElement
     , playerSubscriptionId :: Maybe SubscriptionId
     }
 
@@ -240,6 +244,9 @@ component =
           , downloadLinks: []
           , floatArrays: O.empty
           , periodicWaves: O.empty
+          , images: O.empty
+          , videos: O.empty
+          , canvases: O.empty
           , klankErrorCondition: Nothing
           , playerSubscriptionId: Nothing
           }
@@ -795,6 +802,9 @@ playKlank = do
   prevBuffers <- H.gets _.buffers
   prevFloatArrays <- H.gets _.floatArrays
   prevPeriodicWaves <- H.gets _.periodicWaves
+  prevImages <- H.gets _.images
+  prevVideos <- H.gets _.videos
+  prevCanvases <- H.gets _.canvases
   -- steps
   -- 1. refactor all of the aff stuff below to subscribe function
   -- body of this subscription
@@ -826,6 +836,9 @@ playKlank = do
               o <- traverse (toAffE <<< audioWorkletAddModule ctx) worklets
               tracks <- affable $ klank.tracks prevTracks
               buffers <- affable $ klank.buffers ctx prevBuffers
+              images <- affable $ klank.images prevImages
+              videos <- affable $ klank.videos prevVideos
+              sourceCanvases <- affable $ klank.canvases prevCanvases
               recorders <-
                 affable
                   $ klank.recorders
@@ -843,7 +856,11 @@ playKlank = do
                       ctx
                       engineInfo
                       { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
-                      { canvases: O.singleton "canvas" canvasOrBust }
+                      { canvases: O.singleton "canvas" canvasOrBust
+                      , images: map pure images
+                      , videos: map pure videos
+                      , sourceCanvases: map pure sourceCanvases
+                      }
                       klank.exporter
                   )
               pure
