@@ -31,6 +31,7 @@ functions:
           path: compile
           cors: true
     environment:
+      PATH_TO_LAMBDA: "/var/task/"
       MIXPANEL_TOKEN: "88b2855ebbc656315bace43f141d7f3f"
   upload-file:
     timeout: 29

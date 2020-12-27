@@ -16,6 +16,7 @@ import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
+import Node.Process (lookupEnv)
 import Simple.JSON (writeJSON)
 import Sunde (spawn)
 
@@ -129,6 +130,7 @@ compiler { body } =
                 ("let conf = ./spago.dhall\nin conf // { sources = conf.sources # [ \"" <> uuid <> "/Main.purs\" ] }")
         let
           mod = hackishlyGetModule body.code
+        execPath <- fromMaybe "/var/task/" <$> liftEffect (lookupEnv "PATH_TO_LAMBDA")
         renamed <-
           liftEffect
             $ hackishlyRenameModule uuid body.code mod
@@ -152,7 +154,7 @@ compiler { body } =
                   <> cmd
                   <> [ uuid <> "/Main.purs"
                     ]
-            , cmd: "/var/task/node_modules/.bin/purs"
+            , cmd: execPath <> "node_modules/.bin/purs"
             , stdin: Nothing
             }
             defaultSpawnOptions
@@ -166,7 +168,7 @@ compiler { body } =
                 , "--minify"
                 , "--outfile=" <> uuid <> "/index.js"
                 ]
-            , cmd: "/var/task/node_modules/.bin/esbuild"
+            , cmd: execPath <> "node_modules/.bin/esbuild"
             , stdin: Nothing
             }
             defaultSpawnOptions
@@ -250,6 +252,7 @@ cmd =
   , ".spago/invariant/v4.1.0/src/**/*.purs"
   , ".spago/js-date/v6.0.0/src/**/*.purs"
   , ".spago/js-timers/v4.0.1/src/**/*.purs"
+  , ".spago/klank-dev-util/main/src/**/*.purs"
   , ".spago/lazy/v4.0.0/src/**/*.purs"
   , ".spago/lcg/v2.0.0/src/**/*.purs"
   , ".spago/lists/v5.4.1/src/**/*.purs"
