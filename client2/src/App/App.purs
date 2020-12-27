@@ -41,7 +41,6 @@ import Effect (Effect)
 import Effect.Aff (Aff, launchAff_, makeAff, try)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
-import Effect.Class.Console (log)
 import Effect.Exception (Error, throw)
 import Effect.Now (now)
 import Effect.Timer (clearInterval, setInterval)
@@ -703,6 +702,7 @@ stopper = do
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
+cacheHack :: ∀ t560 t567. Bind t560 ⇒ MonadState { buffers :: Object BrowserAudioBuffer, images :: Object HTMLImageElement, videos :: Object HTMLVideoElement | t567 } t560 ⇒ MonadEffect t560 ⇒ MonadAff t560 ⇒ t560 Unit
 cacheHack = do
   prevBuffers <- H.gets _.buffers
   prevImages <- H.gets _.images
