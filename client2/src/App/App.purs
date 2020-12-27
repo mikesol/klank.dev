@@ -41,6 +41,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, launchAff_, makeAff, try)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
+import Effect.Class.Console (log)
 import Effect.Exception (Error, throw)
 import Effect.Now (now)
 import Effect.Timer (clearInterval, setInterval)
@@ -641,7 +642,7 @@ handleAction = case _ of
               compiledKlank <- simplGetr txt
               H.modify_ (_ { compiledKlank = Just compiledKlank })
               H.liftEffect $ completelyUnsafeEval compiledKlank
-              bufferCacheHack
+              cacheHack
               pure unit
           )
       case (k || (noterm && isNothing klankUrl)) of
@@ -702,13 +703,16 @@ stopper = do
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
-bufferCacheHack :: ∀ t168 t175. Bind t168 ⇒ MonadState { buffers :: Object BrowserAudioBuffer | t175 } t168 ⇒ MonadEffect t168 ⇒ MonadAff t168 ⇒ t168 Unit
-bufferCacheHack = do
+cacheHack = do
   prevBuffers <- H.gets _.buffers
+  prevImages <- H.gets _.images
+  prevVideos <- H.gets _.videos
   klank <- H.liftEffect getKlank
   ctx <- H.liftEffect makeAudioContext
   buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
-  H.modify_ (_ { buffers = buffers })
+  images <- H.liftAff (affable $ klank.images prevImages)
+  videos <- H.liftAff (affable $ klank.videos prevVideos)
+  H.modify_ (_ { buffers = buffers, images = images, videos = videos })
 
 compile :: ∀ t119 t123 t124 t125 t140 t293. MonadEffect t123 => MonadAff t123 => H.HalogenM State t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
 compile = do
@@ -769,7 +773,7 @@ compile = do
                           H.modify_ (_ { compiledKlank = Just res })
                           H.liftEffect $ completelyUnsafeEval res
                           -- fill the buffer cache on compile
-                          bufferCacheHack
+                          cacheHack
                           _ <-
                             H.query
                               _xterm
