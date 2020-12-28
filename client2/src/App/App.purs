@@ -862,9 +862,9 @@ playKlank = do
                       engineInfo
                       { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
                       { canvases: O.singleton "canvas" canvasOrBust
-                      , images: map pure images
-                      , videos: map pure videos
-                      , sourceCanvases: map pure sourceCanvases
+                      , images: images
+                      , videos: videos
+                      , sourceCanvases: sourceCanvases
                       }
                       klank.exporter
                   )
