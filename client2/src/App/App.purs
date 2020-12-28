@@ -703,17 +703,19 @@ stopper = do
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
-cacheHack :: ∀ t560 t567. Bind t560 ⇒ MonadState { buffers :: Object BrowserAudioBuffer, images :: Object HTMLImageElement, videos :: Object HTMLVideoElement | t567 } t560 ⇒ MonadEffect t560 ⇒ MonadAff t560 ⇒ t560 Unit
+cacheHack :: ∀ t560 t567. Bind t560 ⇒ MonadState { buffers :: Object BrowserAudioBuffer, images :: Object HTMLImageElement, videos :: Object HTMLVideoElement, canvases :: Object HTMLCanvasElement | t567 } t560 ⇒ MonadEffect t560 ⇒ MonadAff t560 ⇒ t560 Unit
 cacheHack = do
   prevBuffers <- H.gets _.buffers
   prevImages <- H.gets _.images
   prevVideos <- H.gets _.videos
+  prevCanvases <- H.gets _.canvases
   klank <- H.liftEffect getKlank
   ctx <- H.liftEffect makeAudioContext
   buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
   images <- H.liftAff (affable $ klank.images prevImages)
   videos <- H.liftAff (affable $ klank.videos prevVideos)
-  H.modify_ (_ { buffers = buffers, images = images, videos = videos })
+  canvases <- H.liftAff (affable $ klank.canvases prevCanvases)
+  H.modify_ (_ { buffers = buffers, images = images, videos = videos, canvases = canvases })
 
 compile :: ∀ t119 t123 t124 t125 t140 t293. MonadEffect t123 => MonadAff t123 => H.HalogenM State t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
 compile = do
