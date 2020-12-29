@@ -258,6 +258,7 @@ exports.getBrowserMediaStreamImpl = function (audio) {
 exports.cameraToVideo = function (mediaStream) {
   return function () {
     var video = document.createElement("video");
+    video.autoplay = true;
     video.srcObject = mediaStream;
     return video;
   };
