@@ -882,7 +882,10 @@ playKlank = do
                       { canvases: O.singleton "canvas" canvasOrBust
                       , images: images
                       , videos: videos
-                      , webcam: cameraAsVideo
+                      , cameras:
+                          case cameraAsVideo of
+                            Nothing -> O.empty
+                            Just c -> O.singleton "camera" c
                       , sourceCanvases: sourceCanvases
                       }
                       klank.exporter
