@@ -41,7 +41,6 @@ import Effect (Effect)
 import Effect.Aff (Aff, launchAff_, makeAff, try)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
-import Effect.Class.Console (log)
 import Effect.Exception (Error, throw)
 import Effect.Now (now)
 import Effect.Timer (clearInterval, setInterval)
@@ -59,6 +58,7 @@ import Halogen.Query.EventSource (Finalizer(..))
 import Halogen.Query.EventSource as ES
 import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
+import Unsafe.Coerce (unsafeCoerce)
 import Web.File.File (File)
 import Web.File.File as WF
 import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
@@ -479,10 +479,28 @@ getBrowser = getBrowser_ Nothing Just Opera Firefox Safari IE Edge Chrome EdgeCh
 
 foreign import loadCustomAudioNodes :: AudioContext -> Effect (Promise Unit)
 
-foreign import getMicrophoneImpl :: Effect (Promise BrowserMicrophone)
+foreign import data BrowserMediaStream :: Type
 
-getMicrophone :: Aff BrowserMicrophone
-getMicrophone = toAffE getMicrophoneImpl
+foreign import data BrowserCamera :: Type
+
+foreign import getBrowserMediaStreamImpl :: Boolean -> Boolean -> Effect (Promise BrowserMediaStream)
+
+foreign import cameraToVideo :: BrowserCamera -> Effect HTMLVideoElement
+
+browserMediaStreamToBrowserMicrophone :: BrowserMediaStream -> BrowserMicrophone
+browserMediaStreamToBrowserMicrophone = unsafeCoerce
+
+browserMediaStreamToBrowserCamera :: BrowserMediaStream -> BrowserCamera
+browserMediaStreamToBrowserCamera = unsafeCoerce
+
+getMicrophoneAndCamera :: Boolean -> Boolean -> Aff { microphone :: Maybe BrowserMicrophone, camera :: Maybe BrowserCamera }
+getMicrophoneAndCamera audio video =
+  ( \i ->
+      { microphone: if audio then Just $ browserMediaStreamToBrowserMicrophone i else Nothing
+      , camera: if video then Just $ browserMediaStreamToBrowserCamera i else Nothing
+      }
+  )
+    <$> toAffE (getBrowserMediaStreamImpl audio video)
 
 simplGetr :: forall m. Bind m => MonadAff m => String -> m String
 simplGetr txt = do
@@ -823,14 +841,12 @@ playKlank = do
       $ ES.affEventSource \emitter -> do
           res <-
             try do
-              microphones <-
-                if klank.enableMicrophone then
-                  ( do
-                      mic <- getMicrophone
-                      pure $ O.singleton "microphone" mic
-                  )
-                else
-                  pure O.empty
+              { microphone, camera } <- if klank.enableMicrophone || klank.enableCamera then getMicrophoneAndCamera klank.enableMicrophone klank.enableCamera else pure { microphone: Nothing, camera: Nothing }
+              let
+                microphones = maybe O.empty (O.singleton "microphone") microphone
+              cameraAsVideo <- case camera of
+                Nothing -> pure Nothing
+                Just c -> Just <$> H.liftEffect (cameraToVideo c)
               accumulator <- case initialAccumulator of
                 Nothing -> (affable $ klank.accumulator)
                 Just acc -> pure acc
@@ -866,6 +882,7 @@ playKlank = do
                       { canvases: O.singleton "canvas" canvasOrBust
                       , images: images
                       , videos: videos
+                      , webcam: cameraAsVideo
                       , sourceCanvases: sourceCanvases
                       }
                       klank.exporter

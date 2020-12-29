@@ -244,6 +244,21 @@ exports.bufferFromFile = function (ctx) {
   };
 };
 
-exports.getMicrophoneImpl = function () {
-  return navigator.mediaDevices.getUserMedia({ audio: true });
+exports.getBrowserMediaStreamImpl = function (audio) {
+  return function (video) {
+    return function () {
+      return navigator.mediaDevices.getUserMedia({
+        audio: audio,
+        video: video,
+      });
+    };
+  };
+};
+
+exports.cameraToVideo = function (mediaStream) {
+  return function () {
+    var video = document.createElement("video");
+    video.srcObject = mediaStream;
+    return video;
+  };
 };
