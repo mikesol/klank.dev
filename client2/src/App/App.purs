@@ -885,7 +885,7 @@ playKlank = do
                       , cameras:
                           case cameraAsVideo of
                             Nothing -> O.empty
-                            Just c -> O.singleton "camera" c
+                            Just c -> O.singleton "camera" { camera: c, cache: klank.webcamCache }
                       , sourceCanvases: sourceCanvases
                       }
                       klank.exporter
