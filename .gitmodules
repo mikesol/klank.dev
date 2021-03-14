@@ -1,9 +1,0 @@
-[submodule "client/ace-builds"]
-	path = client/ace-builds
-	url = https://github.com/ajaxorg/ace-builds/
-[submodule "client2/ace-builds"]
-	path = client2/ace-builds
-	url = https://github.com/ajaxorg/ace-builds
-[submodule "client2/chalkie"]
-	path = client2/chalkie
-	url = https://github.com/shawwn/chalkie
