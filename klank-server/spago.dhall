@@ -7,7 +7,6 @@ You can edit this file as you like.
   [ "audio-behaviors"
   , "console"
   , "effect"
-  , "klank-dev-util"
   , "node-child-process"
   , "node-fs"
   , "node-process"
@@ -16,10 +15,9 @@ You can edit this file as you like.
   , "quickcheck"
   , "simple-json"
   , "sunde"
-  , "typelevel-klank-dev"
   , "uuid"
   , "web-touchevents"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs", "test/**/*.purs" ]
+, sources = [ "src/**/*.purs" ]
 }

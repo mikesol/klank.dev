@@ -10,3 +10,4 @@
 /.spago
 app.yaml
 .serverless
+/s_*.js

@@ -17,9 +17,9 @@ jobs:
       - name: install serverless
         run: npm install -g serverless
       - name: install
-        run: cd server && npm install && cd ..
+        run: cd klank-server && npm install && cd ..
       - name: deploy
-        run: cd server && serverless deploy --stage prod && cd ..
+        run: cd klank-server && serverless deploy --stage prod && cd ..
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

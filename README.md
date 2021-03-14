@@ -1,15 +1,12 @@
 # klank.dev
 
-Super simple site for klank.dev.
+A media creation studio written in PureScript.
 
-Rulez:
+This is a mono-repo for four projects:
 
-- The server and client should both be one file.
-- Analytics on everything.
-- Avoid frameworks for the time being unless absolutely necessary.
-
-## Deploy server
-
-```bash
-git subtree push --prefix server heroku master
-```
+| Project        | Description                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `klank-webapp` | The `klank.dev` webapp.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `klank-server` | The `klank.dev` server.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `klank-studio` | A "batteries included" library that allows for local development using klank. See [`mikesol/klank-studio-starter`](https://github.com/mikesol/klank-studio-starter) for a starter project that uses `klank-studio`. Projects built in `klank-studio` can be deployed on `klank.dev`, embedded in a webpage or integrated into a webapp built with frameworks like [Halogen](https://github.com/purescript-halogen/purescript-halogen). |
+| `klank-lib`    | Common libraries used across `klank-webapp`, `klank-server` and `klank-studio`.                                                                                                                                                                                                                                                                                                                                                        |

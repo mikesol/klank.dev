@@ -13,7 +13,7 @@
     "tailwindcss": "^1.8.10"
   },
   "scripts": {
-    "postinstall": "spago install && spago build",
+    "postinstall": "git clone --branch v1.4.12 https://github.com/ajaxorg/ace-builds && git clone --branch v0.0.12 https://github.com/shawwn/chalkie && spago install && spago build",
     "build": "spago build",
     "serve": "parcel dev/index.html --open",
     "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/first-klank.js prod/ && cp dev/ps-aud-mul.js prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && NODE_ENV=production parcel build prod/index.html && cp dev/ps-aud-mul.js dist/ && mkdir -p dist/w/v0 && cp dev/w/v0/*.js dist/w/v0/"

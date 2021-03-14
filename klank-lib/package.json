@@ -1,0 +1,19 @@
+{
+  "name": "klank-lib",
+  "version": "1.0.0",
+  "description": "Types for klank.dev. Check out the [test](./test/Main.purs) to see a full annotated with types.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "spago -x test.dhall test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "purescript": "^0.14.0",
+    "spago": "^0.19.1"
+  }
+}
