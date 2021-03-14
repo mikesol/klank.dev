@@ -12,8 +12,8 @@ import Halogen (ClassName(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
-import Web.HTML (HTMLElement)
 import Halogen.Subscription as HS
+import Web.HTML (HTMLElement)
 
 foreign import data XTerm :: Type
 
@@ -102,47 +102,51 @@ handleAction = case _ of
           _ <- H.liftEffect $ terminalStyling xterm
           H.modify_ (_ { terminal = Just xterm })
           { emitter, listener } <- H.liftEffect HS.create
-          H.liftEffect $ monitorForChange xterm (HS.notify listener <<< AppendChar)
+          H.liftEffect
+            $ monitorForChange xterm (HS.notify listener <<< AppendChar)
+          H.subscribe emitter
   Finalize -> do
     -- Release the reference to the editor and do any other cleanup that a
     -- real world component might need.
     H.modify_ (_ { terminal = Nothing })
-  AppendChar s -> case s of
-    _
-      | s == "\r" || s == "\x03" ->
-        ( do
-            st <- H.gets identity
-            H.raise $ TextChanged st.currentLine
-            H.modify_ (_ { currentLine = "" })
-        )
-      | s == "\x7F" ->
-        ( do
-            st <- H.gets identity
-            H.modify_
-              ( \i ->
-                  let
-                    l = DS.length i.currentLine
-                  in
-                    i
-                      { currentLine = if l == 0 then "" else DS.take (l - 1) i.currentLine
-                      }
-              )
-            if st.currentLine == "" then
-              pure unit
-            else case st.terminal of
-              Nothing -> pure unit
-              Just xterm -> do
-                void $ H.liftEffect $ writeText "\x08 \x08" xterm
-        )
-      | otherwise ->
-        ( do
-            st <- H.gets identity
-            H.modify_ (\i -> i { currentLine = i.currentLine <> s })
-            case st.terminal of
-              Nothing -> pure unit
-              Just xterm -> do
-                void $ H.liftEffect $ writeText s xterm
-        )
+  AppendChar s -> do
+    H.liftEffect $ log "AppendChar"
+    case s of
+      _
+        | s == "\r" || s == "\x03" ->
+          ( do
+              st <- H.gets identity
+              H.raise $ TextChanged st.currentLine
+              H.modify_ (_ { currentLine = "" })
+          )
+        | s == "\x7F" ->
+          ( do
+              st <- H.gets identity
+              H.modify_
+                ( \i ->
+                    let
+                      l = DS.length i.currentLine
+                    in
+                      i
+                        { currentLine = if l == 0 then "" else DS.take (l - 1) i.currentLine
+                        }
+                )
+              if st.currentLine == "" then
+                pure unit
+              else case st.terminal of
+                Nothing -> pure unit
+                Just xterm -> do
+                  void $ H.liftEffect $ writeText "\x08 \x08" xterm
+          )
+        | otherwise ->
+          ( do
+              st <- H.gets identity
+              H.modify_ (\i -> i { currentLine = i.currentLine <> s })
+              case st.terminal of
+                Nothing -> pure unit
+                Just xterm -> do
+                  void $ H.liftEffect $ writeText s xterm
+          )
   HandleChange s -> do
     H.liftEffect (log $ "handling change")
     H.raise $ TextChanged s

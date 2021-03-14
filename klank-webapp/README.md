@@ -1,6 +1,11 @@
 # klank-webapp
 
-Uses:
+## To run locally
 
-1. https://github.com/ajaxorg/ace-builds#v1.4.12
-1. https://github.com/shawwn/chalkie#v0.0.12
+```bash
+npm install
+git clone --depth 1 --branch v1.4.12 https://github.com/ajaxorg/ace-builds
+git clone --depth 1 --branch v0.0.12 https://github.com/shawwn/chalkie
+npx spago build
+npm run serve
+```
