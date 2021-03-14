@@ -1,11 +1,12 @@
 var Mixpanel = require("mixpanel");
 var AWS = require("aws-sdk");
 var s3 = new AWS.S3();
-
-var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
-  host: "api-eu.mixpanel.com",
-});
-
+var mixpanel;
+if (process.env.NODE_ENV !== "development") {
+  mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
+    host: "api-eu.mixpanel.com",
+  });
+}
 exports.handler = function (event, context, callback) {
   if (!event.body) {
     throw new Error("Need a body.");
@@ -28,7 +29,9 @@ exports.handler = function (event, context, callback) {
   if (notKlank) {
     throw new Error("invalid input");
   }
-  mixpanel.track("Compiled klank saved");
+  if (process.env.NODE_ENV !== "development") {
+    mixpanel.track("Compiled klank saved");
+  }
   var stream = Buffer.from(tops.code, "binary");
   var o =
     "klank" +

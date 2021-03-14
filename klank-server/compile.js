@@ -1,16 +1,21 @@
 var ps = require("./output/Main/");
 var Mixpanel = require("mixpanel");
 
-var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
-  host: "api-eu.mixpanel.com",
-});
+var mixpanel;
+if (process.env.NODE_ENV !== "development") {
+  mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
+    host: "api-eu.mixpanel.com",
+  });
+}
 
 exports.handler = function (event, context, callback) {
+  console.log("starting function with", event);
   if (!event.body) {
     throw new Error("Need a body.");
   }
   var tops = null;
   try {
+    console.log("Attempting to parse body", event.body);
     tops = JSON.parse(event.body);
   } catch (e) {
     tops = event.body;
@@ -20,7 +25,9 @@ exports.handler = function (event, context, callback) {
   }
   ps.compile({ body: tops })(function (r) {
     return function () {
-      mixpanel.track("Klank compiled");
+      if (process.env.NODE_ENV !== "development") {
+        mixpanel.track("Klank compiled");
+      }
       callback(null, {
         statusCode: 200,
         headers: {

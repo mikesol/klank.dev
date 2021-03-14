@@ -1,1 +1,3 @@
-exports.unsafeStringify = JSON.stringify;
+exports.unsafeStringify = function (x) {
+  return JSON.stringify(x);
+};

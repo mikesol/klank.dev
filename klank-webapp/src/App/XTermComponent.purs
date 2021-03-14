@@ -110,7 +110,6 @@ handleAction = case _ of
     -- real world component might need.
     H.modify_ (_ { terminal = Nothing })
   AppendChar s -> do
-    H.liftEffect $ log "AppendChar"
     case s of
       _
         | s == "\r" || s == "\x03" ->

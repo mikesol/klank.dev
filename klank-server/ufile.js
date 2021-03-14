@@ -1,10 +1,12 @@
 var Mixpanel = require("mixpanel");
 var AWS = require("aws-sdk");
 var s3 = new AWS.S3();
-
-var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
-  host: "api-eu.mixpanel.com",
-});
+var mixpanel;
+if (process.env.NODE_ENV !== "development") {
+  mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN, {
+    host: "api-eu.mixpanel.com",
+  });
+}
 
 exports.handler = function (event, context, callback) {
   if (!event.body) {
@@ -25,7 +27,9 @@ exports.handler = function (event, context, callback) {
   if (notPurs && notAudioProcessor) {
     throw new Error("invalid input");
   }
-  mixpanel.track(notAudioProcessor ? "Klank saved" : "Processor saved");
+  if (process.env.NODE_ENV !== "development") {
+    mixpanel.track(notAudioProcessor ? "Klank saved" : "Processor saved");
+  }
   var stream = Buffer.from(tops.code, "binary");
   var o =
     "K" +
