@@ -12,8 +12,8 @@ import Halogen (ClassName(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
-import Halogen.Query.EventSource as ES
 import Web.HTML (HTMLElement)
+import Halogen.Subscription as HS
 
 foreign import data XTerm :: Type
 
@@ -45,7 +45,7 @@ type State
     }
 
 -- | The Ace component definition.
-component :: forall m. MonadAff m => H.Component HH.HTML Query Input Output m
+component :: forall m. MonadAff m => H.Component Query Input Output m
 component =
   H.mkComponent
     { initialState
@@ -101,10 +101,8 @@ handleAction = case _ of
           terminalStyling <- H.gets _.terminalStyling
           _ <- H.liftEffect $ terminalStyling xterm
           H.modify_ (_ { terminal = Just xterm })
-          void $ H.subscribe
-            $ ES.effectEventSource \emitter -> do
-                monitorForChange xterm (ES.emit emitter <<< AppendChar)
-                pure mempty
+          { emitter, listener } <- H.liftEffect HS.create
+          H.liftEffect $ monitorForChange xterm (HS.notify listener <<< AppendChar)
   Finalize -> do
     -- Release the reference to the editor and do any other cleanup that a
     -- real world component might need.

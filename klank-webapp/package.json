@@ -6,9 +6,9 @@
     "postcss": "^8.0.9",
     "postcss-cli": "^8.0.0",
     "postcss-modules": "^3.2.2",
-    "purescript": "^0.13.8",
+    "purescript": "^0.14.0",
     "purty": "^6.2.0",
-    "spago": "^0.15.3",
+    "spago": "^0.19.1",
     "tailwind": "^4.0.0",
     "tailwindcss": "^1.8.10"
   },

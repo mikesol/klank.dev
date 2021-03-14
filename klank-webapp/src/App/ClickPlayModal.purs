@@ -3,7 +3,6 @@ module App.ClickPlayModal where
 import Prelude
 import App.AppAction (Action(..))
 import App.ModalUtil (modalBody, modalHeader)
-import Data.Maybe (Maybe(..))
 import Halogen (ClassName(..))
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -32,7 +31,7 @@ clickPlay { open } =
                 ]
             , modalBody [ HH.text "Click or press play to start." ]
             , HH.div [ HP.classes $ map ClassName [ "flex", "justify-end", "pt-2" ] ]
-                [ HH.button [ HP.classes $ map ClassName [ "sm:text-4xl", "md:text-3xl", "lg:text-2xl", "modal-close px-4", "bg-indigo-500", "p-3", "rounded-lg", "text-white", "hover:bg-indigo-400" ], HE.onClick \_ -> Just PlayKlankFromModal ] [ HH.text "Play" ]
+                [ HH.button [ HP.classes $ map ClassName [ "sm:text-4xl", "md:text-3xl", "lg:text-2xl", "modal-close px-4", "bg-indigo-500", "p-3", "rounded-lg", "text-white", "hover:bg-indigo-400" ], HE.onClick \_ -> PlayKlankFromModal ] [ HH.text "Play" ]
                 ]
             ]
         ]

@@ -1,189 +1,142 @@
-{-
-Welcome to your new Dhall package-set!
-
-Below are instructions for how to edit this file for most use
-cases, so that you don't need to know Dhall to use it.
-
-## Warning: Don't Move This Top-Level Comment!
-
-Due to how `dhall format` currently works, this comment's
-instructions cannot appear near corresponding sections below
-because `dhall format` will delete the comment. However,
-it will not delete a top-level comment like this one.
-
-## Use Cases
-
-Most will want to do one or both of these options:
-1. Override/Patch a package's dependency
-2. Add a package not already in the default package set
-
-This file will continue to work whether you use one or both options.
-Instructions for each option are explained below.
-
-### Overriding/Patching a package
-
-Purpose:
-- Change a package's dependency to a newer/older release than the
-    default package set's release
-- Use your own modified version of some dependency that may
-    include new API, changed API, removed API by
-    using your custom git repo of the library rather than
-    the package set's repo
-
-Syntax:
-Replace the overrides' "{=}" (an empty record) with the following idea
-The "//" or "⫽" means "merge these two records and
-  when they have the same value, use the one on the right:"
--------------------------------
-let overrides =
-  { packageName =
-      upstream.packageName // { updateEntity1 = "new value", updateEntity2 = "new value" }
-  , packageName =
-      upstream.packageName // { version = "v4.0.0" }
-  , packageName =
-      upstream.packageName // { repo = "https://www.example.com/path/to/new/repo.git" }
-  }
--------------------------------
-
-Example:
--------------------------------
-let overrides =
-  { halogen =
-      upstream.halogen // { version = "master" }
-  , halogen-vdom =
-      upstream.halogen-vdom // { version = "v4.0.0" }
-  }
--------------------------------
-
-### Additions
-
-Purpose:
-- Add packages that aren't already included in the default package set
-
-Syntax:
-Replace the additions' "{=}" (an empty record) with the following idea:
--------------------------------
-let additions =
-  { package-name =
-       { dependencies =
-           [ "dependency1"
-           , "dependency2"
-           ]
-       , repo =
-           "https://example.com/path/to/git/repo.git"
-       , version =
-           "tag ('v4.0.0') or branch ('master')"
-       }
-  , package-name =
-       { dependencies =
-           [ "dependency1"
-           , "dependency2"
-           ]
-       , repo =
-           "https://example.com/path/to/git/repo.git"
-       , version =
-           "tag ('v4.0.0') or branch ('master')"
-       }
-  , etc.
-  }
--------------------------------
-
-Example:
--------------------------------
-let additions =
-  { benchotron =
-      { dependencies =
-          [ "arrays"
-          , "exists"
-          , "profunctor"
-          , "strings"
-          , "quickcheck"
-          , "lcg"
-          , "transformers"
-          , "foldable-traversable"
-          , "exceptions"
-          , "node-fs"
-          , "node-buffer"
-          , "node-readline"
-          , "datetime"
-          , "now"
-          ]
-      , repo =
-          "https://github.com/hdgarrood/purescript-benchotron.git"
-      , version =
-          "v7.0.0"
-      }
-  }
--------------------------------
--}
-
-
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20200911-2/packages.dhall sha256:872c06349ed9c8210be43982dc6466c2ca7c5c441129826bcb9bf3672938f16e
+      https://github.com/purescript/package-sets/releases/download/psc-0.14.0-20210313/packages.dhall sha256:ba6368b31902aad206851fec930e89465440ebf5a1fe0391f8be396e2d2f1d87
 
 let overrides = {=}
 
-let additions = {
-    audio-behaviors =
-      { dependencies =
+let additions =
+      { klank-lib = ../klank-lib/spago.dhall as Location
+      , audio-behaviors =
+        { dependencies =
           [ "aff-promise"
-            , "behaviors"
-            , "console"
-            , "debug"
-            , "effect"
-            , "drawing"
-            , "canvas"
-            , "foreign-object"
-            , "heterogeneous"
-            , "parseint"
-            , "psci-support"
-            , "record-extra"
-            , "sized-vectors"
-            , "typelevel-prelude"
-            , "typelevel-graph"
+          , "painting"
+          , "behaviors"
+          , "console"
+          , "debug"
+          , "effect"
+          , "drawing"
+          , "canvas"
+          , "foreign-object"
+          , "heterogeneous"
+          , "psci-support"
+          , "sized-vectors"
+          , "typelevel-prelude"
+          , "typelevel-graph"
           ]
-      , repo =
-          "https://github.com/mikesol/purescript-audio-behaviors.git"
-      , version =
-          "master"
-      },
-    typelevel-graph =
-      { dependencies =
-          [ 
-             "record-extra"
-            , "typelevel-peano"
+        , repo = "https://github.com/mikesol/purescript-audio-behaviors.git"
+        , version = "master"
+        }
+      , typelevel-graph =
+        { dependencies = [ "typelevel-peano" ]
+        , repo = "https://github.com/mikesol/purescript-typelevel-graph.git"
+        , version = "main"
+        }
+      , uuid =
+        { dependencies =
+          [ "console", "effect", "psci-support", "spec", "foreign-generic" ]
+        , repo = "https://github.com/spicydonuts/purescript-uuid.git"
+        , version = "master"
+        }
+      , foreign-generic =
+        { dependencies = [ "effect", "exceptions", "record" ]
+        , repo = "https://github.com/paf31/purescript-foreign-generic.git"
+        , version = "master"
+        }
+      , simple-json =
+        { dependencies = [ "foreign" ]
+        , repo = "https://github.com/justinwoo/purescript-simple-json.git"
+        , version = "ps-0.14"
+        }
+      , typelevel-peano =
+        { dependencies =
+          [ "arrays"
+          , "console"
+          , "effect"
+          , "prelude"
+          , "psci-support"
+          , "typelevel-prelude"
+          , "unsafe-coerce"
           ]
-      , repo =
-          "https://github.com/mikesol/purescript-typelevel-graph.git"
-      , version =
-          "main"
-      },
-          typelevel-klank-dev =
-      { dependencies =
-          [ "audio-behaviors"
-            , "console"
-            , "effect"
-            , "psci-support"
+        , repo = "https://github.com/csicar/purescript-typelevel-peano.git"
+        , version = "v1.0.1"
+        }
+      , event =
+        { dependencies =
+          [ "console"
+          , "effect"
+          , "filterable"
+          , "nullable"
+          , "unsafe-reference"
+          , "js-timers"
+          , "now"
           ]
-      , repo =
-          "https://github.com/mikesol/type.klank.dev.git"
-      , version =
-          "main"
-      },
-          klank-dev-util =
-      { dependencies =
-          [ "audio-behaviors"
-            , "console"
-            , "effect"
-            , "psci-support"
-            , "typelevel-klank-dev"
+        , repo = "https://github.com/mikesol/purescript-event.git"
+        , version = "master"
+        }
+      , behaviors =
+        { dependencies =
+          [ "psci-support"
+          , "effect"
+          , "ordered-collections"
+          , "filterable"
+          , "nullable"
+          , "event"
+          , "web-html"
+          , "web-events"
+          , "web-uievents"
           ]
-      , repo =
-          "https://github.com/mikesol/util.klank.dev.git"
-      , version =
-          "main"
+        , repo = "https://github.com/mikesol/purescript-behaviors.git"
+        , version = "master"
+        }
+      , painting =
+        { dependencies =
+          [ "canvas"
+          , "colors"
+          , "console"
+          , "effect"
+          , "foldable-traversable"
+          , "foreign-object"
+          , "psci-support"
+          , "web-html"
+          ]
+        , repo = "https://github.com/mikesol/purescript-painting.git"
+        , version = "main"
+        }
+      , halogen-storybook =
+        { dependencies =
+          [ "console"
+          , "debug"
+          , "effect"
+          , "foreign-object"
+          , "halogen"
+          , "psci-support"
+          , "routing"
+          ]
+        , repo = "https://github.com/rnons/purescript-halogen-storybook.git"
+        , version = "master"
+        }
+      , b64 =
+        { dependencies =
+          [ "arraybuffer-types"
+          , "arrays"
+          , "assert"
+          , "console"
+          , "effect"
+          , "either"
+          , "encoding"
+          , "enums"
+          , "exceptions"
+          , "functions"
+          , "partial"
+          , "prelude"
+          , "psci-support"
+          , "quickcheck"
+          , "strings"
+          , "stringutils"
+          , "unicode"
+          ]
+        , repo = "https://github.com/menelaos/purescript-b64.git"
+        , version = "master"
+        }
       }
-
-}
 
 in  upstream // overrides // additions

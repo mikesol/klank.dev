@@ -2,7 +2,6 @@ module App.AppAction where
 
 import Prelude
 import App.AceComponent as AceComponent
-import App.DropzoneComponent as DropzoneComponent
 import App.XTermComponent as XTermComponent
 import Data.Maybe (Maybe)
 import Effect (Effect)
@@ -33,4 +32,3 @@ data Action
   | ProgressUpdate Number
   | HandleAceUpdate AceComponent.Output
   | HandleTerminalUpdate XTermComponent.Output
-  | HandleFileDrop DropzoneComponent.Output

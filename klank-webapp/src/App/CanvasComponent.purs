@@ -34,7 +34,7 @@ type State
   = {}
 
 -- | The Ace component definition.
-component :: forall m. MonadAff m => H.Component HH.HTML Query Input Output m
+component :: forall m. MonadAff m => H.Component Query Input Output m
 component =
   H.mkComponent
     { initialState

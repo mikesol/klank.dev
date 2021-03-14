@@ -18,7 +18,6 @@ data CLI
   | Link
   | LinkNoTerm
   | LinkCompiledKlank
-  | Upload
   | FileLink
   | Downloads
 
@@ -33,7 +32,6 @@ cli =
     <|> try downloads
     <|> try linkCompiledKlank
     <|> try linkNoTerm
-    <|> try upload
     <|> try link
     <|> try fileLink
     <|> compile
@@ -70,9 +68,6 @@ downloads = (try $ string "downloads" <|> string "d") *> pure Downloads
 
 compile ∷ ∀ s. StringLike s ⇒ Parser s CLI
 compile = (try $ string "compile" <|> string "k") *> pure Compile
-
-upload ∷ ∀ s. StringLike s ⇒ Parser s CLI
-upload = (try $ string "upload" <|> string "u") *> pure Upload
 
 editorCanvas ∷ ∀ s. StringLike s ⇒ Parser s CLI
 editorCanvas = (try $ string "split" <|> string "ec") *> pure EditorCanvas
