@@ -9,13 +9,11 @@ if (process.env.NODE_ENV !== "development") {
 }
 
 exports.handler = function (event, context, callback) {
-  console.log("starting function with", event);
   if (!event.body) {
     throw new Error("Need a body.");
   }
   var tops = null;
   try {
-    console.log("Attempting to parse body", event.body);
     tops = JSON.parse(event.body);
   } catch (e) {
     tops = event.body;

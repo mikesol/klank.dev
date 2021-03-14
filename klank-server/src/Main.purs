@@ -310,5 +310,4 @@ cmd =
   , ".spago/web-storage/v4.0.0/src/**/*.purs"
   , ".spago/web-touchevents/v3.0.0/src/**/*.purs"
   , ".spago/web-uievents/v3.0.0/src/**/*.purs"
-  , "src/**/*.purs"
   ]
