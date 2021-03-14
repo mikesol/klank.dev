@@ -102,9 +102,9 @@ handleAction = case _ of
           _ <- H.liftEffect $ terminalStyling xterm
           H.modify_ (_ { terminal = Just xterm })
           { emitter, listener } <- H.liftEffect HS.create
+          void $ H.subscribe emitter
           H.liftEffect
             $ monitorForChange xterm (HS.notify listener <<< AppendChar)
-          H.subscribe emitter
   Finalize -> do
     -- Release the reference to the editor and do any other cleanup that a
     -- real world component might need.

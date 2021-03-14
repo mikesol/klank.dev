@@ -87,8 +87,8 @@ handleAction = case _ of
           _ <- H.liftEffect $ editorStyling editor
           H.modify_ (_ { editor = Just editor })
           { emitter, listener } <- H.liftEffect HS.create
+          void $ H.subscribe emitter
           H.liftEffect $ Session.onChange session (\_ -> HS.notify listener HandleChange)
-          H.subscribe emitter
   Finalize -> do
     -- Release the reference to the editor and do any other cleanup that a
     -- real world component might need.
