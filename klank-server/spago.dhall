@@ -7,6 +7,7 @@ You can edit this file as you like.
   [ "audio-behaviors"
   , "console"
   , "effect"
+  , "klank-lib"
   , "node-child-process"
   , "node-fs"
   , "node-process"
