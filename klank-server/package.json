@@ -17,7 +17,6 @@
     "mixpanel": "^0.13.0",
     "purescript": "^0.14.0",
     "rimraf": "^3.0.2",
-    "spago": "^0.19.1",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
@@ -26,6 +25,7 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "helmet": "^4.2.0",
-    "prettier": "^2.2.1"
+    "prettier": "^2.2.1",
+    "spago": "^0.19.1"
   }
 }
