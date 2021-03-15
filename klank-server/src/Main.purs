@@ -1,7 +1,7 @@
 module Main where
 
 import Prelude
-import Data.Array (catMaybes, head, intercalate)
+import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -10,13 +10,12 @@ import Data.String.Regex (regex, match)
 import Data.String.Regex.Flags (noFlags)
 import Data.UUID (genUUID, toString)
 import Effect (Effect)
-import Effect.Aff (Aff, bracket, launchAff_, try)
+import Effect.Aff (Aff, bracket, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
-import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
-import Node.Process (lookupEnv)
+import Node.FS.Sync (exists, mkdir, readTextFile, writeTextFile)
 import Simple.JSON (writeJSON)
 import Sunde (spawn)
 
