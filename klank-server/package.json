@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "postinstall": "node perm.js && spago install && spago build",
     "build": "spago build",
+    "build-lambda": "spago -x lambda.dhall build",
     "test": "spago test"
   },
   "keywords": [],

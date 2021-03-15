@@ -101,6 +101,16 @@ compiler { body } =
         _ <-
           spawn
             { args:
+                [ "package.json"
+                , "/tmp/deps/package.json"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
                 [ "-r"
                 , "src"
                 , "/tmp/deps/src"
@@ -140,7 +150,7 @@ compiler { body } =
           liftEffect
             $ writeTextFile
                 UTF8
-                ("/tmp/deps/" <> uuid <> ".dhall")
+                ("/tmp/deps/lambda.dhall")
                 ("let conf = ./spago.dhall\nin conf // { sources = conf.sources # [ \"" <> uuid <> "/Main.purs\" ] }")
         let
           mod = hackishlyGetModule body.code
@@ -161,8 +171,8 @@ compiler { body } =
                 renamed.code
         whatHappened <-
           spawn
-            { args: [ "spago", "-x", uuid <> ".dhall", "build" ]
-            , cmd: "npx"
+            { args: [ "run", "build-lambda" ]
+            , cmd: "npm"
             , stdin: Nothing
             }
             defaultSpawnOptions
