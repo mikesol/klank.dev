@@ -12,3 +12,4 @@ app.yaml
 .serverless
 /s_*.js
 /serverless_sdk
+/klank-lib

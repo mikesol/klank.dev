@@ -1,7 +1,7 @@
 module Main where
 
 import Prelude
-import Data.Array (catMaybes, head)
+import Data.Array (catMaybes, head, intercalate)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -10,12 +10,13 @@ import Data.String.Regex (regex, match)
 import Data.String.Regex.Flags (noFlags)
 import Data.UUID (genUUID, toString)
 import Effect (Effect)
-import Effect.Aff (Aff, bracket, launchAff_)
+import Effect.Aff (Aff, bracket, launchAff_, try)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
-import Node.FS.Sync (exists, mkdir, readTextFile, writeTextFile)
+import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
+import Node.Process (lookupEnv)
 import Simple.JSON (writeJSON)
 import Sunde (spawn)
 
@@ -53,7 +54,84 @@ compiler { body } =
   bracket
     ( do
         uuid' <- liftEffect $ genUUID
-        _ <- liftEffect $ mkdir (toString uuid')
+        exts <- liftEffect $ exists ("/tmp/deps")
+        _ <- liftEffect $ when (not exts) (mkdir ("/tmp/deps"))
+        _ <-
+          spawn
+            { args:
+                [ "-r"
+                , ".spago/"
+                , "/tmp/deps/.spago"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
+                [ "-r"
+                , "output/"
+                , "/tmp/deps/output"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
+                [ "-r"
+                , "klank-lib/"
+                , "/tmp/deps/klank-lib"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
+                [ "spago.dhall"
+                , "/tmp/deps/spago.dhall"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
+                [ "-r"
+                , "src"
+                , "/tmp/deps/src"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
+                [ "packages2.dhall"
+                , "/tmp/deps/packages.dhall"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <-
+          spawn
+            { args:
+                [ "-r"
+                , "node_modules/"
+                , "/tmp/deps/node_modules"
+                ]
+            , cmd: "cp"
+            , stdin: Nothing
+            }
+            defaultSpawnOptions
+        _ <- liftEffect $ mkdir ("/tmp/deps/" <> (toString uuid'))
         pure (toString uuid')
     )
     (const $ pure unit)
@@ -63,7 +141,7 @@ compiler { body } =
           liftEffect
             $ writeTextFile
                 UTF8
-                (uuid <> ".dhall")
+                ("/tmp/deps/" <> uuid <> ".dhall")
                 ("let conf = ./spago.dhall\nin conf // { sources = conf.sources # [ \"" <> uuid <> "/Main.purs\" ] }")
         let
           mod = hackishlyGetModule body.code
@@ -74,21 +152,23 @@ compiler { body } =
           liftEffect
             $ writeTextFile
                 UTF8
-                (uuid <> "/index_.js")
+                ("/tmp/deps/" <> uuid <> "/index_.js")
                 ("window.klank = require(\"../output/" <> renamed.moduleName <> "/\").main")
         _ <-
           liftEffect
             $ writeTextFile
                 UTF8
-                (uuid <> "/Main.purs")
+                ("/tmp/deps/" <> uuid <> "/Main.purs")
                 renamed.code
         whatHappened <-
           spawn
-            { args: [ "spago", "-x", (uuid <> ".dhall"), "build" ]
+            { args: [ "spago", "-x", uuid <> ".dhall", "build" ]
             , cmd: "npx"
             , stdin: Nothing
             }
             defaultSpawnOptions
+              { cwd = Just "/tmp/deps"
+              }
         whatHappened2 <-
           spawn
             { args:
@@ -101,14 +181,16 @@ compiler { body } =
             , stdin: Nothing
             }
             defaultSpawnOptions
-        worked <- liftEffect $ exists (uuid <> "/index.js")
+              { cwd = Just "/tmp/deps"
+              }
+        worked <- liftEffect $ exists ("/tmp/deps/" <> uuid <> "/index.js")
         if worked then
           ( do
               res <-
                 liftEffect
                   $ readTextFile
                       UTF8
-                      (uuid <> "/index.js")
+                      ("/tmp/deps/" <> uuid <> "/index.js")
               pure
                 { res: Just res
                 , error: Nothing
