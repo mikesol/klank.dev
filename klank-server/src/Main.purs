@@ -1,7 +1,7 @@
 module Main where
 
 import Prelude
-import Data.Array (catMaybes, head, intercalate)
+import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -10,13 +10,12 @@ import Data.String.Regex (regex, match)
 import Data.String.Regex.Flags (noFlags)
 import Data.UUID (genUUID, toString)
 import Effect (Effect)
-import Effect.Aff (Aff, bracket, launchAff_, try)
+import Effect.Aff (Aff, bracket, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
-import Node.FS.Sync (exists, mkdir, readTextFile, rmdir, unlink, writeTextFile)
-import Node.Process (lookupEnv)
+import Node.FS.Sync (exists, mkdir, readTextFile, writeTextFile)
 import Simple.JSON (writeJSON)
 import Sunde (spawn)
 
@@ -48,47 +47,6 @@ hackishlyRenameModule u cd m = do
     { code: (replaceAll (Pattern ("module " <> m <> " where")) (Replacement ("module " <> moduleName <> " where")) cd)
     , moduleName
     }
-
-tearDown =
-  ( \uuid -> do
-      let
-        moduleName =
-          "A"
-            <> (replaceAll (Pattern "-") (Replacement "") uuid)
-      _ <-
-        try
-          ( liftEffect
-              $ unlink
-                  ("/tmp/deps/" <> uuid <> "/index_.js")
-          )
-      _ <-
-        try
-          ( liftEffect
-              $ unlink
-                  ("/tmp/deps/" <> uuid <> "/index.js")
-          )
-      _ <-
-        try
-          ( liftEffect
-              $ unlink
-                  ("/tmp/output/" <> moduleName <> "/externs.cbor")
-          )
-      _ <-
-        try
-          ( liftEffect
-              $ unlink
-                  ("/tmp/output/" <> moduleName <> "/index.js")
-          )
-      _ <-
-        try
-          ( liftEffect
-              $ rmdir
-                  ("/tmp/output/" <> moduleName)
-          )
-      liftEffect $ unlink ("/tmp/deps/" <> uuid <> "/Main.purs")
-      liftEffect $ rmdir ("/tmp/deps/" <> uuid)
-      liftEffect $ unlink ("/tmp/deps/" <> uuid <> ".dhall")
-  )
 
 compiler :: { body :: Code } -> Aff Compiled
 compiler { body } =
