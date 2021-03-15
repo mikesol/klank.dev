@@ -19,6 +19,8 @@ import Node.FS.Sync (exists, mkdir, readTextFile, writeTextFile)
 import Simple.JSON (writeJSON)
 import Sunde (spawn)
 
+foreign import clearDeps :: Effect Unit
+
 type Code
   = { code :: String
     }
@@ -54,7 +56,8 @@ compiler { body } =
     ( do
         uuid' <- liftEffect $ genUUID
         exts <- liftEffect $ exists ("/tmp/deps")
-        _ <- liftEffect $ when (not exts) (mkdir ("/tmp/deps"))
+        _ <- liftEffect $ when (exts) clearDeps
+        _ <- liftEffect $ (mkdir ("/tmp/deps"))
         _ <-
           spawn
             { args:
