@@ -19,7 +19,7 @@ provider:
 
 functions:
   compile-klank:
-    timeout: 29
+    timeout: 120
     handler: compile.handler
     events:
       - schedule:

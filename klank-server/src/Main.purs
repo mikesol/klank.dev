@@ -4,6 +4,7 @@ import Prelude
 import Data.Array (catMaybes, head)
 import Data.Array.NonEmpty (tail)
 import Data.Either (either)
+import Data.JSDate (getTime, now)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), Replacement(..), replaceAll, split)
 import Data.String.Regex (regex, match)
@@ -13,6 +14,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, bracket, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
+import Effect.Class.Console as Log
 import Node.ChildProcess (defaultSpawnOptions)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (exists, mkdir, readTextFile, writeTextFile)
@@ -50,10 +52,16 @@ hackishlyRenameModule u cd m = do
     , moduleName
     }
 
+logTime :: String -> Aff Unit
+logTime msg = do
+  time <- liftEffect now
+  log $ show (getTime time) <> " :: " <> msg
+
 compiler :: { body :: Code } -> Aff Compiled
 compiler { body } =
   bracket
     ( do
+        logTime "starting lambda"
         uuid' <- liftEffect $ genUUID
         exts <- liftEffect $ exists ("/tmp/deps")
         _ <- liftEffect $ when (exts) clearDeps
@@ -148,6 +156,7 @@ compiler { body } =
     )
     (const $ pure unit)
     ( \uuid -> do
+        logTime "starting compilation step"
         _ <- liftEffect $ log "Trying to compile on lambda path"
         _ <-
           liftEffect
@@ -172,6 +181,7 @@ compiler { body } =
                 UTF8
                 ("/tmp/deps/" <> uuid <> "/Main.purs")
                 renamed.code
+        _ <- liftEffect $ log "Invoking purs"
         whatHappened <-
           spawn
             { args: [ "compile" ] <> files <> [ uuid <> "/Main.purs" ]
@@ -181,6 +191,9 @@ compiler { body } =
             defaultSpawnOptions
               { cwd = Just "/tmp/deps"
               }
+        Log.info whatHappened.stdout
+        Log.info whatHappened.stderr
+        logTime "starting esbuild step"
         whatHappened2 <-
           spawn
             { args:
@@ -203,6 +216,7 @@ compiler { body } =
                   $ readTextFile
                       UTF8
                       ("/tmp/deps/" <> uuid <> "/index.js")
+              logTime "finishing with success"
               pure
                 { res: Just res
                 , error: Nothing
