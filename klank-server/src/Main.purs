@@ -70,6 +70,7 @@ compiler { body } =
           spawn
             { args:
                 [ "-r"
+                , "-p"
                 , ".spago/"
                 , "/tmp/deps/.spago"
                 ]
@@ -81,6 +82,7 @@ compiler { body } =
           spawn
             { args:
                 [ "-r"
+                , "-p"
                 , "output/"
                 , "/tmp/deps/output"
                 ]
@@ -92,6 +94,7 @@ compiler { body } =
           spawn
             { args:
                 [ "-r"
+                , "-p"
                 , "klank-lib/"
                 , "/tmp/deps/klank-lib"
                 ]
@@ -123,6 +126,7 @@ compiler { body } =
           spawn
             { args:
                 [ "-r"
+                , "-p"
                 , "src"
                 , "/tmp/deps/src"
                 ]
