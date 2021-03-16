@@ -33,7 +33,7 @@ initialPS =
 
 -- New to PureScript? Check out https://www.purescript.org/ for learning resources!
 -- To learn more about FRP and the behavior pattern, make sure to check out:
--- • https://github.com/paf31/purescript-behaviors
+-- • https://github.com/mikesol/purescript-behaviors
 -- • https://github.com/mikesol/purescript-audio-behaviors
 import Prelude
 import Data.Typelevel.Num (D1)

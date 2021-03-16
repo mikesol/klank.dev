@@ -340,7 +340,7 @@ files =
   , ".spago/unfoldable/v5.0.0/src/**/*.purs"
   , ".spago/unsafe-coerce/v5.0.0/src/**/*.purs"
   , ".spago/unsafe-reference/v4.0.0/src/**/*.purs"
-  , ".spago/uuid/master/src/**/*.purs"
+  , ".spago/uuid/main/src/**/*.purs"
   , ".spago/variant/v7.0.2/src/**/*.purs"
   , ".spago/web-dom/v5.0.0/src/**/*.purs"
   , ".spago/web-events/v3.0.0/src/**/*.purs"

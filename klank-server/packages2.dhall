@@ -34,7 +34,7 @@ let additions =
         { dependencies =
           [ "console", "effect", "psci-support", "spec", "foreign-generic" ]
         , repo = "https://github.com/spicydonuts/purescript-uuid.git"
-        , version = "master"
+        , version = "main"
         }
       , foreign-generic =
         { dependencies = [ "effect", "exceptions", "record" ]
