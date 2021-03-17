@@ -53,12 +53,16 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
+import Klank.Studio as Studio
 import Text.Parsing.Parser (runParser)
-import Type.Klank.Dev (Klank'')
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Web.File.File (File)
 import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
+
+data AppMode
+  = KlankDev
+  | Studio
 
 foreign import serverUrl :: Effect String
 
@@ -90,9 +94,12 @@ foreign import completelyUnsafeEval :: String -> Effect Unit
 
 foreign import canvasOrBust :: Effect CanvasElement
 
-foreign import getKlank ::
-  forall accumulator env.
-  Effect (Klank'' accumulator env)
+foreign import getKlank_ :: Void
+
+getKlank :: AppMode -> Effect Studio.Main
+getKlank = case _ of
+  KlankDev -> unsafeCoerce getKlank_
+  Studio -> pure Studio.main
 
 foreign import bufferFromFile :: AudioContext -> File -> Effect (Promise BrowserAudioBuffer)
 
@@ -116,7 +123,8 @@ data KlankError
   | NoDiceLinuxChrome
 
 type State
-  = { editorText :: String
+  = { appMode :: AppMode
+    , editorText :: String
     , isPlaying :: Maybe Boolean
     , downloadProgress :: Maybe Number
     , compiledKlank :: Maybe String
@@ -197,12 +205,13 @@ affable f =
     f (cb <<< Right) (cb <<< Left)
     pure mempty
 
-component :: forall q i o m. MonadAff m => H.Component q i o m
-component =
+component :: forall q i o m. MonadAff m => AppMode -> H.Component q i o m
+component mode =
   H.mkComponent
     { initialState:
         \_ ->
-          { editorText: initialPS
+          { appMode: mode
+          , editorText: initialPS
           , isPlaying: Nothing
           , compiledKlank: Nothing
           , mainDisplay: EditorDisplay
@@ -577,7 +586,10 @@ handleAction = case _ of
       k <- H.liftEffect $ getK
       c <- H.liftEffect $ getC
       ec <- H.liftEffect $ getEC
-      noterm <- H.liftEffect $ getNoterm
+      appMode <- H.gets _.appMode
+      noterm <- case appMode of
+        Studio -> pure true
+        KlankDev -> H.liftEffect $ getNoterm
       nostop <- H.liftEffect $ getNostop
       when noterm
         ( do
@@ -686,13 +698,14 @@ stopper = do
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
 
-cacheHack :: ∀ t560 t567. Bind t560 ⇒ MonadState { buffers :: Object BrowserAudioBuffer, images :: Object HTMLImageElement, videos :: Object HTMLVideoElement, canvases :: Object HTMLCanvasElement | t567 } t560 ⇒ MonadEffect t560 ⇒ MonadAff t560 ⇒ t560 Unit
+cacheHack :: ∀ t560 t567. Bind t560 ⇒ MonadState { appMode :: AppMode, buffers :: Object BrowserAudioBuffer, images :: Object HTMLImageElement, videos :: Object HTMLVideoElement, canvases :: Object HTMLCanvasElement | t567 } t560 ⇒ MonadEffect t560 ⇒ MonadAff t560 ⇒ t560 Unit
 cacheHack = do
   prevBuffers <- H.gets _.buffers
   prevImages <- H.gets _.images
   prevVideos <- H.gets _.videos
   prevCanvases <- H.gets _.canvases
-  klank <- H.liftEffect getKlank
+  appMode <- H.gets _.appMode
+  klank <- H.liftEffect (getKlank appMode)
   ctx <- H.liftEffect makeAudioContext
   buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
   images <- H.liftAff (affable $ klank.images prevImages)
@@ -775,12 +788,15 @@ playKlank :: forall m o. MonadEffect m => MonadAff m => H.HalogenM State Action 
 playKlank = do
   stopper
   oldSubId <- H.gets _.playerSubscriptionId
+  appMode <- H.gets _.appMode
   maybe (pure unit) H.unsubscribe oldSubId
   H.tell _xterm Terminal (XTermComponent.ChangeText $ "\r\nRetrieving assets...")
-  klank <- H.liftEffect getKlank
+  klank <- H.liftEffect (getKlank appMode)
   ctx <- H.liftEffect makeAudioContext
   H.liftAff (toAffE $ loadCustomAudioNodes ctx)
-  initialAccumulator <- H.gets _.initialAccumulator
+  -- a bit hackish: we unsafely coerce the initial accumulator as we
+  -- do not know what it will be
+  initialAccumulator <- unsafeCoerce <$> H.gets _.initialAccumulator
   prevWorklets <- H.gets _.worklets
   prevTracks <- H.gets _.tracks
   prevRecorders <- H.gets _.recorders

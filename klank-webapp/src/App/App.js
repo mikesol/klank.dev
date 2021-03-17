@@ -215,7 +215,7 @@ exports.loadCustomAudioNodes = function (audioCtx) {
     return audioCtx.audioWorklet.addModule(process.env.AUDIO_MUL_URL);
   };
 };
-exports.getKlank = function () {
+exports.getKlank_ = function () {
   return window.klank;
 };
 

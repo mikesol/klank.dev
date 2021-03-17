@@ -1,7 +1,7 @@
 module Main where
 
 import Prelude
-import App.App (noDiceSafari)
+import App.App (AppMode(..), noDiceSafari)
 import App.App as App
 import App.ClickPlayModal as ClickPlayModal
 import App.LoadingModal as LoadingModal
@@ -62,4 +62,4 @@ main =
   HA.runHalogenAff do
     body <- HA.awaitBody
     -- runStorybook { stories, logo: Nothing } body
-    runUI App.component unit body
+    runUI (App.component KlankDev) unit body
