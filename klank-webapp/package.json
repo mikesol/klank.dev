@@ -13,7 +13,7 @@
     "tailwindcss": "^1.8.10"
   },
   "scripts": {
-    "postinstall": "spago install && spago build",
+    "postinstall": "node postinstall.js && spago install && spago build",
     "build": "spago build",
     "serve": "parcel dev/index.html --open",
     "studio": "parcel studio/index.html --open",
