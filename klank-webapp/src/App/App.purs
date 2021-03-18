@@ -64,6 +64,8 @@ data AppMode
   = KlankDev
   | Studio
 
+derive instance eqAppMode :: Eq AppMode
+
 foreign import serverUrl :: Effect String
 
 foreign import getK :: Effect Boolean
@@ -648,7 +650,7 @@ handleAction = case _ of
               cacheHack
               pure unit
           )
-      case (k || (noterm && isNothing klankUrl)) of
+      case (k || (noterm && isNothing klankUrl && appMode == KlankDev)) of
         true -> compile
         false -> pure unit
       if noterm then
