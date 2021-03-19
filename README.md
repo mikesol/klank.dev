@@ -2,7 +2,7 @@
 
 A media creation studio written in PureScript.
 
-This is a mono-repo for four projects:
+This is a mono-repo for three projects:
 
 | Project        | Description                                                                                                                                                                                                                      |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
