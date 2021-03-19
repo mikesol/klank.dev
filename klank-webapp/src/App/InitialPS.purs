@@ -20,7 +20,7 @@ frontMatter =
     <> "!\r\nSound and animation in the browser using PureScript." ::
     String
 
-afterMatter = "\r\n- Type p then ENTER to play the current scene\r\n- Type s then ENTER to stop the current scene\r\n- Type k then ENTER to compile when you make changes\r\n- Discussion on https://discourse.purescript.org\r\n- Type h then ENTER for more commands\r\n$ " :: String
+afterMatter = "\r\n- Type p then ENTER to play the current scene\r\n- Type s then ENTER to stop the current scene\r\n- Type k then ENTER to compile when you make changes\r\n- Discussion on https://discourse.purescript.org\r\n- Type l then ENTER to generate a link to the current klank\r\n- Type h then ENTER for more commands\r\n$ " :: String
 
 welcomeMsg =
   ( frontMatter
