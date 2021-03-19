@@ -288,7 +288,7 @@ files =
   , ".spago/invariant/v5.0.0/src/**/*.purs"
   , ".spago/js-date/v7.0.0/src/**/*.purs"
   , ".spago/js-timers/v5.0.1/src/**/*.purs"
-  , "./klank-lib/src/**/*.purs"
+  , "klank-lib/src/**/*.purs"
   , ".spago/lazy/v5.0.0/src/**/*.purs"
   , ".spago/lcg/v3.0.0/src/**/*.purs"
   , ".spago/lists/v6.0.0/src/**/*.purs"
