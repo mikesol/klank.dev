@@ -2,7 +2,20 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>klank studio</title>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=UA-178920104-1"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "UA-178920104-1");
+    </script>
+    <title>klank.dev</title>
     <link rel="stylesheet" href="./klank.css" />
     <link
       rel="stylesheet"
@@ -34,9 +47,11 @@
       src="https://kit.fontawesome.com/25737c0931.js"
       crossorigin="anonymous"
     ></script>
+    <!-- Intro klank -->
+    <script src="first-klank.js"></script>
     <link rel="stylesheet" href="../node_modules/xterm/css/xterm.css" />
   </head>
   <body>
-    <script src="./studio.js"></script>
+    <script src="./index.js"></script>
   </body>
 </html>
