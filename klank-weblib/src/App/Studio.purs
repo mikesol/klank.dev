@@ -148,7 +148,6 @@ handleAction = case _ of
   PlayKlankFromStopButton -> do
     stopper
     H.modify_ (_ { isPlaying = Just false })
-  CloseLinkModal -> pure mempty
   Initialize -> do
     H.liftEffect canvasDimensionHack
     initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
@@ -179,5 +178,3 @@ handleAction = case _ of
       )
   PlayStartFailed s -> pure mempty
   RecordingRegistered k v -> pure mempty
-  HandleAceUpdate msg -> pure mempty
-  HandleTerminalUpdate msg -> pure mempty

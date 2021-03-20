@@ -27,13 +27,9 @@ data Action
   = Initialize
   | Finalize
 
--- | The state for the ace component - we only need a reference to the editor,
--- | as Ace editor has its own internal state that we can query instead of
--- | replicating it within Halogen.
 type State
   = {}
 
--- | The Ace component definition.
 component :: forall m. MonadAff m => H.Component Query Input Output m
 component =
   H.mkComponent
