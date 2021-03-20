@@ -47,6 +47,7 @@ import Klank.Weblib.AppAction (Action(..))
 import Klank.Weblib.CLI as CLI
 import Klank.Weblib.CanvasComponent as CanvasComponent
 import Klank.Weblib.ClickPlayModal (clickPlay)
+import Klank.Weblib.ComponentTypes (AceOutput(..), XTermOutput(..))
 import Klank.Weblib.InitialPS (helpMsg, initialPS, welcomeMsg)
 import Klank.Weblib.LinkModal (modal)
 import Klank.Weblib.LoadingModal (loading)
@@ -675,7 +676,7 @@ handleAction = case _ of
 
 handleAceOuput :: forall accumulator env o m. MonadAff m => AceComponent.Output -> H.HalogenM (State accumulator env) Action ChildSlots o m Unit
 handleAceOuput = case _ of
-  AceComponent.TextChanged editorText -> H.modify_ (_ { editorText = editorText })
+  AceTextChanged editorText -> H.modify_ (_ { editorText = editorText })
 
 cacheHack ::
   ∀ accumulator env t560 t567.
@@ -867,7 +868,7 @@ makeLink noTerm justLink linkType = do
 handleTerminalOutput :: ∀ accumulator env (o ∷ Type) (m ∷ Type -> Type) r. MonadEffect m ⇒ MonadAff m ⇒ XTermComponent.Output → H.HalogenM { audioCtx ∷ Maybe AudioContext , buffers ∷ Object BrowserAudioBuffer , canvases ∷ Object HTMLCanvasElement , compiledKlank ∷ Maybe String , editorText ∷ String , effectfulKlank ∷ Effect (Klank'' accumulator env) , floatArrays ∷ Object BrowserFloatArray , images ∷ Object HTMLImageElement , initialAccumulator ∷ Maybe accumulator , isPlaying ∷ Maybe Boolean , linkModalOpen ∷ Boolean , linkModalProperNoun ∷ String , linkModalUrl ∷ String , mainDisplay ∷ MainDisplay , periodicWaves ∷ Object BrowserPeriodicWave , playerSubscriptionId ∷ Maybe SubscriptionId , recorders ∷ Object (MediaRecorder -> Effect Unit) , stopFn ∷ Maybe (Effect Unit) , tracks ∷ Object BrowserAudioTrack , videos ∷ Object HTMLVideoElement , worklets ∷ Array String | r } Action ChildSlots o m Unit
 
 handleTerminalOutput = case _ of
-  XTermComponent.TextChanged tt -> do
+  XTermTextChanged tt -> do
     let
       parserRes = runParser tt CLI.cli
     case parserRes of

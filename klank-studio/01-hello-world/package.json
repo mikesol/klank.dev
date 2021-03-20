@@ -1,21 +1,21 @@
 {
   "private": true,
   "devDependencies": {
-    "autoprefixer": "9.8.6",
-    "parcel": "^2.0.0-beta.1",
-    "postcss": "^8.0.9",
-    "postcss-cli": "^8.0.0",
-    "postcss-modules": "^3.2.2",
+    "autoprefixer": "^9.8.6",
+    "parcel": "^2.0.0-beta.2",
+    "postcss": "^8.2.8",
+    "postcss-cli": "^8.3.1",
+    "postcss-modules": "^4.0.0",
     "purescript": "^0.14.0",
     "purty": "^6.2.0",
     "spago": "^0.19.1",
     "tailwind": "^4.0.0",
-    "tailwindcss": "^1.8.10"
+    "tailwindcss": "^2.0.4"
   },
   "scripts": {
     "postinstall": "spago install && spago build",
     "build": "spago build",
     "serve": "parcel dev/index.html --open",
-    "build-prod": "mkdir -p prod && cp dev/index.html prod/ && cp dev/klank.css prod/ && rm -rf dist && spago bundle-app --to prod/index.js && NODE_ENV=production parcel build prod/index.html"
+    "build-prod": "mkdir -p prod && cp dev/* prod/ && rm -rf dist && spago bundle-app --to prod/index.js && NODE_ENV=production parcel build prod/index.html"
   }
 }

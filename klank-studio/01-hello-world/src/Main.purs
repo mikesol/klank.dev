@@ -4,7 +4,6 @@ import Prelude
 import Effect (Effect)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
-import Klank.Weblib.App as App
 import Data.List ((:), List(..))
 import Data.NonEmpty ((:|))
 import Data.Typelevel.Num (D1)
@@ -12,6 +11,7 @@ import FRP.Behavior (Behavior)
 import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker)
 import Math (pi, sin, cos)
 import Type.Klank.Dev (Klank, klank)
+import Klank.Weblib.Studio as Studio
 
 scene :: Number -> Behavior (AudioUnit D1)
 scene time =
@@ -35,4 +35,4 @@ main :: Effect Unit
 main =
   HA.runHalogenAff do
     body <- HA.awaitBody
-    runUI (App.component (pure playMe)) unit body
+    runUI (Studio.component (pure playMe)) unit body

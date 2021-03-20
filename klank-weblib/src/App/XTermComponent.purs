@@ -1,7 +1,6 @@
 module Klank.Weblib.XTermComponent where
 
 import Prelude
-import Klank.Weblib.XTermTheme (XTermTheme, darkTheme)
 import Data.Foldable (traverse_)
 import Data.Maybe (Maybe(..))
 import Data.String as DS
@@ -13,6 +12,8 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
+import Klank.Weblib.ComponentTypes (XTermOutput(..))
+import Klank.Weblib.XTermTheme (XTermTheme, darkTheme)
 import Web.HTML (HTMLElement)
 
 foreign import data XTerm :: Type
@@ -26,8 +27,8 @@ type Slot
 data Query a
   = ChangeText String a
 
-data Output
-  = TextChanged String
+type Output
+  = XTermOutput
 
 data Action
   = Initialize
@@ -115,7 +116,7 @@ handleAction = case _ of
         | s == "\r" || s == "\x03" ->
           ( do
               st <- H.gets identity
-              H.raise $ TextChanged st.currentLine
+              H.raise $ XTermTextChanged st.currentLine
               H.modify_ (_ { currentLine = "" })
           )
         | s == "\x7F" ->
@@ -148,7 +149,7 @@ handleAction = case _ of
           )
   HandleChange s -> do
     H.liftEffect (log $ "handling change")
-    H.raise $ TextChanged s
+    H.raise $ XTermTextChanged s
 
 handleQuery :: forall m a. MonadAff m => Query a -> H.HalogenM State Action () Output m (Maybe a)
 handleQuery = case _ of

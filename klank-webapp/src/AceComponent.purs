@@ -15,6 +15,10 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
+import Klank.Weblib.ComponentTypes (AceOutput(..))
+
+type Output
+  = AceOutput
 
 type Input
   = { editorStyling :: Editor -> Effect Unit }
@@ -25,9 +29,6 @@ type Slot
 data Query a
   = ChangeText String a
   | GetText (Maybe String -> a)
-
-data Output
-  = TextChanged String
 
 data Action
   = Initialize
@@ -98,7 +99,7 @@ handleAction = case _ of
     H.gets _.editor
       >>= traverse_ \editor -> do
           text <- H.liftEffect (Editor.getValue editor)
-          H.raise $ TextChanged text
+          H.raise $ AceTextChanged text
 
 handleQuery :: forall m a. MonadAff m => Query a -> H.HalogenM State Action () Output m (Maybe a)
 handleQuery = case _ of
@@ -117,5 +118,5 @@ handleQuery = case _ of
         current <- H.liftEffect $ Editor.getValue editor
         when (text /= current) do
           void $ H.liftEffect $ Editor.setValue text Nothing editor
-    H.raise $ TextChanged text
+    H.raise $ AceTextChanged text
     pure (Just next)
