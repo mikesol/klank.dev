@@ -20,14 +20,15 @@
     "webpack-dev-server": "^3.11.2"
   },
   "scripts": {
-    "postinstall": "node postinstall.js && spago install && spago build",
+    "postinstall": "spago install && spago build",
     "start": "webpack serve --mode=development --open",
     "build": "export NODE_ENV=production && webpack"
   },
   "dependencies": {
-    "ace-builds": "file:ace-builds",
+    "ace-builds": "^1.4.12",
+    "audioworklet-polyfill": "^1.1.2",
     "buffer": "^6.0.3",
-    "chalkie": "file:chalkie",
+    "chalkie": "0.0.12",
     "querystring-browser": "^1.0.4",
     "xhr2": "^0.2.1",
     "xterm": "^4.9.0",
