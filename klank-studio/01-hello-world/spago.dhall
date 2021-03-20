@@ -10,5 +10,5 @@
   , "psci-support"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs" ]
+, sources = [ "purs/**/*.purs" ]
 }

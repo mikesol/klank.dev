@@ -11,7 +11,7 @@
 /.cache/
 /dist/
 /prod/*
-.parcel-cache
 /chalkie
 /ace-builds
 /media
+bundle.js
