@@ -1,22 +1,13 @@
 module Klank.Weblib.App where
 
 import Prelude
+
 import Ace (Position(..))
 import Ace.EditSession as EditSession
 import Ace.Editor as Editor
 import Affjax as AX
 import Affjax.RequestBody as RequestBody
 import Affjax.ResponseFormat as AXRF
-import Klank.Weblib.AceComponent as AceComponent
-import Klank.Weblib.AppAction (Action(..))
-import Klank.Weblib.CLI as CLI
-import Klank.Weblib.CanvasComponent as CanvasComponent
-import Klank.Weblib.ClickPlayModal (clickPlay)
-import Klank.Weblib.InitialPS (helpMsg, initialPS, welcomeMsg)
-import Klank.Weblib.LinkModal (modal)
-import Klank.Weblib.LoadingModal (loading)
-import Klank.Weblib.XTermComponent (focus, setFontSize, writeText)
-import Klank.Weblib.XTermComponent as XTermComponent
 import Control.Monad.State (class MonadState)
 import Control.Promise (Promise, toAffE)
 import Data.Argonaut (class EncodeJson, getField, toObject)
@@ -33,16 +24,15 @@ import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.String as S
 import Data.String.Base64 (decode)
-import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Aff (Aff, makeAff, try)
+import Effect.Aff (Aff, makeAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error, throw)
 import Effect.Now (now)
 import Effect.Timer (IntervalId, clearInterval, setInterval)
-import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserMicrophone, BrowserPeriodicWave, MediaRecorder, RecorderSignature, audioWorkletAddModule, makeAudioContext)
+import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserMicrophone, BrowserPeriodicWave, MediaRecorder, RecorderSignature, makeAudioContext)
 import Foreign.Object (Object)
 import Foreign.Object as O
 import Graphics.Canvas (CanvasElement)
@@ -52,18 +42,23 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Subscription as HS
+import Klank.Weblib.AceComponent as AceComponent
+import Klank.Weblib.AppAction (Action(..))
+import Klank.Weblib.CLI as CLI
+import Klank.Weblib.CanvasComponent as CanvasComponent
+import Klank.Weblib.ClickPlayModal (clickPlay)
+import Klank.Weblib.InitialPS (helpMsg, initialPS, welcomeMsg)
+import Klank.Weblib.LinkModal (modal)
+import Klank.Weblib.LoadingModal (loading)
+import Klank.Weblib.Shared (playKlank, stopper, getInitialAccumulator, canvasDimensionHack)
+import Klank.Weblib.XTermComponent (focus, setFontSize, writeText)
+import Klank.Weblib.XTermComponent as XTermComponent
 import Text.Parsing.Parser (runParser)
 import Type.Klank.Dev (Klank'')
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Web.File.File (File)
 import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
-
-data AppMode
-  = KlankDev
-  | Studio
-
-derive instance eqAppMode :: Eq AppMode
 
 foreign import serverUrl :: Effect String
 
@@ -81,15 +76,11 @@ foreign import getNostop :: Effect Boolean
 
 foreign import getB64 :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
-foreign import getInitialAccumulator :: forall accumulator. Maybe accumulator -> (accumulator -> Maybe accumulator) -> Effect (Maybe accumulator)
-
 foreign import getUrl :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
 foreign import getKlankUrl :: Maybe String -> (String -> Maybe String) -> Effect (Maybe String)
 
 foreign import escape :: String -> Effect String
-
-foreign import canvasDimensionHack :: Effect Unit
 
 foreign import completelyUnsafeEval :: String -> Effect Unit
 
@@ -122,8 +113,7 @@ data KlankError
   | NoDiceLinuxChrome
 
 type State accumulator env
-  = { appMode :: AppMode
-    , effectfulKlank :: Effect (Klank'' accumulator env)
+  = { effectfulKlank :: Effect (Klank'' accumulator env)
     , editorText :: String
     , isPlaying :: Maybe Boolean
     , downloadProgress :: Maybe Number
@@ -205,13 +195,12 @@ affable f =
     f (cb <<< Right) (cb <<< Left)
     pure mempty
 
-component :: forall accumulator env q i o m. MonadAff m => EffectfulKlank accumulator env -> AppMode -> H.Component q i o m
-component effectfulKlank mode =
+component :: forall accumulator env q i o m. MonadAff m => EffectfulKlank accumulator env -> H.Component q i o m
+component effectfulKlank =
   H.mkComponent
     { initialState:
         \_ ->
-          { appMode: mode
-          , effectfulKlank
+          { effectfulKlank
           , editorText: initialPS
           , isPlaying: Nothing
           , compiledKlank: Nothing
@@ -587,10 +576,7 @@ handleAction = case _ of
       k <- H.liftEffect $ getK
       c <- H.liftEffect $ getC
       ec <- H.liftEffect $ getEC
-      appMode <- H.gets _.appMode
-      noterm <- case appMode of
-        Studio -> pure true
-        KlankDev -> H.liftEffect $ getNoterm
+      noterm <- H.liftEffect $ getNoterm
       nostop <- H.liftEffect $ getNostop
       when noterm
         ( do
@@ -649,7 +635,7 @@ handleAction = case _ of
               cacheHack
               pure unit
           )
-      case (k || (noterm && isNothing klankUrl && appMode == KlankDev)) of
+      case (k || (noterm && isNothing klankUrl)) of
         true -> compile
         false -> pure unit
       if noterm then
@@ -691,19 +677,11 @@ handleAceOuput :: forall accumulator env o m. MonadAff m => AceComponent.Output 
 handleAceOuput = case _ of
   AceComponent.TextChanged editorText -> H.modify_ (_ { editorText = editorText })
 
-stopper :: ∀ t32 t33 t34 t35 t42. MonadEffect t32 => H.HalogenM { audioCtx ∷ Maybe AudioContext, playerSubscriptionId ∷ Maybe SubscriptionId, stopFn ∷ Maybe (Effect Unit) | t42 } t35 t34 t33 t32 Unit
-stopper = do
-  sfn <- H.gets _.stopFn
-  ctx <- H.gets _.audioCtx
-  H.modify_ (_ { stopFn = Nothing, audioCtx = Nothing, playerSubscriptionId = Nothing })
-  maybe (pure unit) H.liftEffect sfn
-  maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
-
 cacheHack ::
   ∀ accumulator env t560 t567.
   Bind t560 ⇒
   MonadState
-    { appMode :: AppMode, buffers :: Object BrowserAudioBuffer, images :: Object HTMLImageElement, videos :: Object HTMLVideoElement, canvases :: Object HTMLCanvasElement, effectfulKlank :: EffectfulKlank accumulator env
+    { buffers :: Object BrowserAudioBuffer, images :: Object HTMLImageElement, videos :: Object HTMLVideoElement, canvases :: Object HTMLCanvasElement, effectfulKlank :: EffectfulKlank accumulator env
     | t567
     }
     t560 ⇒
@@ -722,7 +700,7 @@ cacheHack = do
   canvases <- H.liftAff (affable $ klank.canvases prevCanvases)
   H.modify_ (_ { buffers = buffers, images = images, videos = videos, canvases = canvases })
 
-compile :: ∀ accumulator env t119 t123 t124 t125 t140 t293. MonadEffect t123 => MonadAff t123 => H.HalogenM (State accumulator env) t125 ( ace ∷ H.Slot AceComponent.Query t119 WhichAce, xterm ∷ H.Slot XTermComponent.Query t140 WhichTerm | t293 ) t124 t123 Unit
+compile :: ∀ accumulator env (t773 ∷ Type) (t774 ∷ Type) (t775 ∷ Type -> Type) (t779 ∷ Type) (t809 ∷ Type) (t932 ∷ Type) (t933 ∷ Type) (t956 ∷ Row Type) (t960 ∷ Row Type). MonadEffect t775 ⇒ MonadAff t775 ⇒ H.HalogenM { buffers ∷ Object BrowserAudioBuffer , canvases ∷ Object HTMLCanvasElement , compiledKlank ∷ Maybe String , editorText ∷ String , effectfulKlank ∷ Effect (Klank'' accumulator env) , images ∷ Object HTMLImageElement , videos ∷ Object HTMLVideoElement | t960 } t773 ChildSlots t774 t775 Unit
 compile = do
   url <- H.liftEffect serverUrl
   -- in case we are in compile mode, we use editorText
@@ -793,107 +771,6 @@ compile = do
     )
     txt_
 
-playKlank :: forall accumulator env m o. MonadEffect m => MonadAff m => H.HalogenM (State accumulator env) Action ChildSlots o m Unit
-playKlank = do
-  stopper
-  oldSubId <- H.gets _.playerSubscriptionId
-  appMode <- H.gets _.appMode
-  maybe (pure unit) H.unsubscribe oldSubId
-  H.tell _xterm Terminal (XTermComponent.ChangeText $ "\r\nRetrieving assets...")
-  klank' <- H.gets _.effectfulKlank
-  klank <- H.liftEffect klank'
-  ctx <- H.liftEffect makeAudioContext
-  H.liftAff (toAffE $ loadCustomAudioNodes ctx)
-  -- a bit hackish: we unsafely coerce the initial accumulator as we
-  -- do not know what it will be
-  initialAccumulator <- unsafeCoerce <$> H.gets _.initialAccumulator
-  prevWorklets <- H.gets _.worklets
-  prevTracks <- H.gets _.tracks
-  prevRecorders <- H.gets _.recorders
-  prevBuffers <- H.gets _.buffers
-  prevFloatArrays <- H.gets _.floatArrays
-  prevPeriodicWaves <- H.gets _.periodicWaves
-  prevImages <- H.gets _.images
-  prevVideos <- H.gets _.videos
-  prevCanvases <- H.gets _.canvases
-  -- steps
-  -- 1. refactor all of the aff stuff below to subscribe function
-  -- body of this subscription
-  -- note that the subscription won't have a finalizer for now
-  -- may lead to wanky memory, we can look into that...
-  -- 2. create actions for everything below.
-  { emitter, listener } <- H.liftEffect HS.create
-  subId <- H.subscribe emitter
-  H.liftAff do
-    res <-
-      try do
-        { microphone, camera } <- if klank.enableMicrophone || klank.enableCamera then getMicrophoneAndCamera klank.enableMicrophone klank.enableCamera else pure { microphone: Nothing, camera: Nothing }
-        let
-          microphones = maybe O.empty (O.singleton "microphone") microphone
-        cameraAsVideo <- case camera of
-          Nothing -> pure Nothing
-          Just c -> Just <$> H.liftEffect (cameraToVideo c)
-        accumulator <- case initialAccumulator of
-          Nothing -> (affable $ klank.accumulator)
-          Just acc -> pure acc
-        worklets <- (affable $ klank.worklets prevWorklets)
-        -------------
-        ----- maybe it's just superstition
-        ---- but i think this didn't work unless I explicitly asked for a variable `o`
-        --- instead of _ <-
-        --------- weird...
-        o <- traverse (toAffE <<< audioWorkletAddModule ctx) worklets
-        tracks <- affable $ klank.tracks prevTracks
-        buffers <- affable $ klank.buffers ctx prevBuffers
-        images <- affable $ klank.images prevImages
-        videos <- affable $ klank.videos prevVideos
-        sourceCanvases <- affable $ klank.canvases prevCanvases
-        recorders <-
-          affable
-            $ klank.recorders
-                O.empty
-                ( \k v -> HS.notify listener (RecordingRegistered k v)
-                )
-                prevRecorders
-        floatArrays <- affable $ klank.floatArrays prevFloatArrays
-        periodicWaves <- affable $ klank.periodicWaves ctx prevPeriodicWaves
-        engineInfo <- affable $ klank.engineInfo
-        turnMeOff <-
-          H.liftEffect
-            ( klank.run
-                accumulator
-                ctx
-                engineInfo
-                { microphones, recorders, tracks, buffers, floatArrays, periodicWaves }
-                { canvases: O.singleton "canvas" canvasOrBust
-                , images: images
-                , videos: videos
-                , cameras:
-                    case cameraAsVideo of
-                      Nothing -> O.empty
-                      Just c -> O.singleton "camera" { camera: c, cache: klank.webcamCache }
-                , sourceCanvases: sourceCanvases
-                }
-                klank.exporter
-            )
-        pure
-          { stopFn: Just turnMeOff
-          , isPlaying: Just true
-          , periodicWaves: periodicWaves
-          , audioCtx: Just ctx
-          , recorders: recorders
-          , worklets: worklets
-          , tracks: tracks
-          , buffers: buffers
-          , floatArrays: floatArrays
-          }
-    H.liftEffect
-      $ case res of
-          Left err -> HS.notify listener (PlayStartFailed (show err))
-          Right resp -> H.liftEffect $ HS.notify listener (PlayStartSucceeded resp)
-  H.modify_ (_ { playerSubscriptionId = Just subId })
-  pure unit
-
 data LinkType
   = FromEditor
   | FromCompiledKlank
@@ -935,9 +812,7 @@ makeUploadLink linkType code = do
     )
     (pure <<< _.body)
     _uploadLink'
-
--- todo - avoid Firebase call for extra link
-makeLink :: ∀ accumulator env m t723 t724. MonadEffect m => MonadAff m => Boolean -> Boolean -> LinkType -> H.HalogenM (State accumulator env) t724 ChildSlots t723 m Unit
+makeLink :: ∀ (t1209 ∷ Type) (t1210 ∷ Type) (t1211 ∷ Type -> Type) (t1306 ∷ Type) (t1347 ∷ Row Type). MonadEffect t1211 ⇒ MonadAff t1211 ⇒ EncodeJson t1306 ⇒ Boolean → Boolean → LinkType → H.HalogenM { compiledKlank ∷ Maybe t1306 , linkModalOpen ∷ Boolean , linkModalProperNoun ∷ String , linkModalUrl ∷ String | t1347 } t1209 ChildSlots t1210 t1211 Unit
 makeLink noTerm justLink linkType = do
   txt_ <- H.request _ace Editor AceComponent.GetText
   maybe
@@ -989,7 +864,8 @@ makeLink noTerm justLink linkType = do
     )
     txt_
 
-handleTerminalOutput :: forall accumulator env o m. MonadAff m => XTermComponent.Output -> H.HalogenM (State accumulator env) Action ChildSlots o m Unit
+handleTerminalOutput :: ∀ accumulator env (o ∷ Type) (m ∷ Type -> Type) r. MonadEffect m ⇒ MonadAff m ⇒ XTermComponent.Output → H.HalogenM { audioCtx ∷ Maybe AudioContext , buffers ∷ Object BrowserAudioBuffer , canvases ∷ Object HTMLCanvasElement , compiledKlank ∷ Maybe String , editorText ∷ String , effectfulKlank ∷ Effect (Klank'' accumulator env) , floatArrays ∷ Object BrowserFloatArray , images ∷ Object HTMLImageElement , initialAccumulator ∷ Maybe accumulator , isPlaying ∷ Maybe Boolean , linkModalOpen ∷ Boolean , linkModalProperNoun ∷ String , linkModalUrl ∷ String , mainDisplay ∷ MainDisplay , periodicWaves ∷ Object BrowserPeriodicWave , playerSubscriptionId ∷ Maybe SubscriptionId , recorders ∷ Object (MediaRecorder -> Effect Unit) , stopFn ∷ Maybe (Effect Unit) , tracks ∷ Object BrowserAudioTrack , videos ∷ Object HTMLVideoElement , worklets ∷ Array String | r } Action ChildSlots o m Unit
+
 handleTerminalOutput = case _ of
   XTermComponent.TextChanged tt -> do
     let
@@ -1011,7 +887,9 @@ handleTerminalOutput = case _ of
         H.tell _xterm Terminal (XTermComponent.ChangeText $ "\r\n$ ")
         H.modify_ (_ { mainDisplay = CanvasDisplay })
         H.liftEffect canvasDimensionHack
-      Right CLI.Play -> playKlank
+      Right CLI.Play -> do
+        H.tell _xterm Terminal (XTermComponent.ChangeText $ "\r\nRetrieving assets...")
+        playKlank
       Right CLI.Stop -> do
         H.tell _xterm Terminal (XTermComponent.ChangeText $ "\r\n$ ")
         stopper

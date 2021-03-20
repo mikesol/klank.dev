@@ -10,7 +10,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Halogen.Storybook (Stories, runStorybook, proxy)
 import Halogen.VDom.Driver (runUI)
-import Klank.Weblib.App (AppMode(..), noDiceSafari, getKlank_)
+import Klank.Weblib.App (noDiceSafari, getKlank_)
 import Klank.Weblib.App as App
 import Klank.Weblib.ClickPlayModal as ClickPlayModal
 import Klank.Weblib.LoadingModal as LoadingModal
@@ -62,4 +62,4 @@ main =
   HA.runHalogenAff do
     body <- HA.awaitBody
     -- runStorybook { stories, logo: Nothing } body
-    runUI (App.component getKlank_ KlankDev) unit body
+    runUI (App.component getKlank_) unit body

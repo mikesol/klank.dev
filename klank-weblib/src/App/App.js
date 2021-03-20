@@ -27,22 +27,6 @@ exports.getKlankUrl = function (nothing) {
     };
   };
 };
-exports.getInitialAccumulator = function (nothing) {
-  return function (just) {
-    return function () {
-      var urlParams = new URLSearchParams(window.location.search);
-      var myParam = urlParams.get("acc");
-      if (myParam) {
-        try {
-          return just(JSON.parse(myParam));
-        } catch (e) {
-          return nothing;
-        }
-      }
-      return nothing;
-    };
-  };
-};
 
 exports.getOS_ = function (nothing) {
   return function (just) {
@@ -189,11 +173,7 @@ exports.escape = function (s) {
     return querystring.escape(s);
   };
 };
-exports.canvasDimensionHack = function () {
-  var canvas = document.getElementById("klank-canvas");
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-};
+
 exports.serverUrl = function () {
   return process.env.SERVER_URI;
 };
