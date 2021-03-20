@@ -95,7 +95,7 @@ foreign import completelyUnsafeEval :: String -> Effect Unit
 
 foreign import canvasOrBust :: Effect CanvasElement
 
-foreign import getKlank_ :: Void
+foreign import getKlank_ :: forall accumulator env. EffectfulKlank accumulator env
 
 type EffectfulKlank accumulator env
   = Effect (Klank'' accumulator env)

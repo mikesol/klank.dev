@@ -1,10 +1,6 @@
 module Main where
 
 import Prelude
-import App.App (AppMode(..), noDiceSafari)
-import App.App as App
-import App.ClickPlayModal as ClickPlayModal
-import App.LoadingModal as LoadingModal
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Foreign.Object as Object
@@ -14,6 +10,10 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import Halogen.Storybook (Stories, runStorybook, proxy)
 import Halogen.VDom.Driver (runUI)
+import Klank.Weblib.App (AppMode(..), noDiceSafari, getKlank_)
+import Klank.Weblib.App as App
+import Klank.Weblib.ClickPlayModal as ClickPlayModal
+import Klank.Weblib.LoadingModal as LoadingModal
 
 playRender render =
   H.mkComponent
@@ -62,4 +62,4 @@ main =
   HA.runHalogenAff do
     body <- HA.awaitBody
     -- runStorybook { stories, logo: Nothing } body
-    runUI (App.component KlankDev) unit body
+    runUI (App.component getKlank_ KlankDev) unit body

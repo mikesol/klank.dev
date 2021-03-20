@@ -1,14 +1,15 @@
 module Studio where
 
 import Prelude
-import App.App (AppMode(..))
-import App.App as App
 import Effect (Effect)
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
+import Klank.Weblib.App (AppMode(..))
+import Klank.Weblib.App as App
+import Klank.Studio as Studio
 
 main :: Effect Unit
 main =
   HA.runHalogenAff do
     body <- HA.awaitBody
-    runUI (App.component Studio) unit body
+    runUI (App.component (pure Studio.main) Studio) unit body

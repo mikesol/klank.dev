@@ -5,6 +5,7 @@ let overrides = {=}
 
 let additions =
       { klank-lib = ../klank-lib/spago.dhall as Location
+      , klank-weblib = ../klank-weblib/spago.dhall as Location
       , audio-behaviors =
         { dependencies =
           [ "aff-promise"

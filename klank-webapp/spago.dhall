@@ -12,6 +12,7 @@
   , "halogen"
   , "halogen-storybook"
   , "klank-lib"
+  , "klank-weblib"
   , "painting"
   , "parsing"
   , "psci-support"
