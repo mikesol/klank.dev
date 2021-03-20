@@ -10,7 +10,6 @@ module.exports = {
     filename: "bundle.js",
   },
   plugins: [
-    new webpack.IgnorePlugin(/xhr2/),
     new Dotenv({
       path:
         process.env.NODE_ENV === "production"
