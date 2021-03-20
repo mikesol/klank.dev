@@ -9,9 +9,7 @@
 /.psa*
 /.spago
 /.cache/
-/dist/
-/prod/*
 /chalkie
 /ace-builds
 /media
-bundle.js
+/dist/bundle.js
