@@ -1,6 +1,10 @@
-module Klank.Studio where
+module Main where
 
 import Prelude
+import Effect (Effect)
+import Halogen.Aff as HA
+import Halogen.VDom.Driver (runUI)
+import Klank.Weblib.App as App
 import Data.List ((:), List(..))
 import Data.NonEmpty ((:|))
 import Data.Typelevel.Num (D1)
@@ -21,11 +25,14 @@ scene time =
   where
   rad = pi * time
 
-type Main
-  = Klank
-
-main :: Main
-main =
+playMe :: Klank
+playMe =
   klank
     { run = runInBrowser scene
     }
+
+main :: Effect Unit
+main =
+  HA.runHalogenAff do
+    body <- HA.awaitBody
+    runUI (App.component (pure playMe)) unit body
