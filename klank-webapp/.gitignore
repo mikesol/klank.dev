@@ -9,7 +9,7 @@
 /.psa*
 /.spago
 /.cache/
-/dist/
+/dist/bundle.js
 /prod/*
 .parcel-cache
 /chalkie
