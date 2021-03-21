@@ -57,7 +57,7 @@ ep i' tag len rate os =
             ( gainT_
                 (tag <> "gain")
                 (epwf [ Tuple 0.0 1.0, Tuple (len - 0.03) 1.0, Tuple len 0.0 ] t)
-                ( (panner_ "p_cnn" (sin i) (playBufWithOffset_ (tag <> "buf_e") "election" 1.0 os))
+                ( (panner_ (tag <> "p_cnn") (sin i) (playBufWithOffset_ (tag <> "buf_e") "election" 1.0 os))
                     :| ( ( if ( i' `mod` 16 /= 2
                               && i' `mod` 16
                               /= 5
