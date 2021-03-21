@@ -19,7 +19,7 @@ import Klank.Weblib.AppAction (Action(..))
 import Klank.Weblib.CanvasComponent as CanvasComponent
 import Klank.Weblib.ClickPlayModal (clickPlay)
 import Klank.Weblib.LoadingModal (loading)
-import Klank.Weblib.Shared (playKlank, stopKlank, getInitialAccumulator, canvasDimensionHack)
+import Klank.Weblib.Shared (canvasDimensionHack, fetchAssets, playKlank, stopKlank)
 import Type.Klank.Dev (Klank'')
 import Type.Proxy (Proxy(..))
 import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
@@ -36,7 +36,6 @@ type State accumulator env
     , stopFn :: Maybe (Effect Unit)
     , progressIntervalId :: Maybe IntervalId
     , audioCtx :: Maybe AudioContext
-    , initialAccumulator :: Maybe accumulator
     , worklets :: Array String
     , loadingModalOpen :: Boolean
     , playModalOpen :: Boolean
@@ -80,7 +79,6 @@ component effectfulKlank =
           , downloadProgress: Nothing
           , loadingModalOpen: true
           , playModalOpen: false
-          , initialAccumulator: Nothing
           , worklets: []
           , tracks: O.empty
           , buffers: O.empty
@@ -158,8 +156,7 @@ handleAction = case _ of
     H.modify_ (_ { isPlaying = Just false })
   Initialize -> do
     H.liftEffect canvasDimensionHack
-    initialAccumulator <- H.liftEffect $ getInitialAccumulator Nothing Just
-    H.modify_ (_ { initialAccumulator = initialAccumulator })
+    fetchAssets
     H.modify_
       ( _
           { playModalOpen = true

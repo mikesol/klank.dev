@@ -75,19 +75,3 @@ exports.canvasDimensionHack = function () {
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
 };
-exports.getInitialAccumulator = function (nothing) {
-  return function (just) {
-    return function () {
-      var urlParams = new URLSearchParams(window.location.search);
-      var myParam = urlParams.get("acc");
-      if (myParam) {
-        try {
-          return just(JSON.parse(myParam));
-        } catch (e) {
-          return nothing;
-        }
-      }
-      return nothing;
-    };
-  };
-};

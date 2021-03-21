@@ -2,6 +2,7 @@ module Klank.Weblib.Shared where
 
 import Prelude
 
+import Control.Monad.State (class MonadState)
 import Control.Promise (Promise, toAffE)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
@@ -56,7 +57,6 @@ type PlayKlank =
     , effectfulKlank :: Effect (Klank'' accumulator env)
     , floatArrays :: Object BrowserFloatArray
     , images :: Object HTMLImageElement
-    , initialAccumulator :: Maybe accumulator
     , periodicWaves :: Object BrowserPeriodicWave
     , playerSubscriptionId :: Maybe H.SubscriptionId
     , recorders :: Object (MediaRecorder -> Effect Unit)
@@ -103,9 +103,6 @@ playKlank actions = do
   klank <- H.liftEffect klank'
   ctx <- H.liftEffect makeAudioContext
   H.liftAff (toAffE $ loadCustomAudioNodes ctx)
-  -- a bit hackish: we unsafely coerce the initial accumulator as we
-  -- do not know what it will be
-  initialAccumulator <- unsafeCoerce <$> H.gets _.initialAccumulator
   prevWorklets <- H.gets _.worklets
   prevTracks <- H.gets _.tracks
   prevRecorders <- H.gets _.recorders
@@ -134,9 +131,7 @@ playKlank actions = do
         cameraAsVideo <- case camera of
           Nothing -> pure Nothing
           Just c -> Just <$> H.liftEffect (cameraToVideo c)
-        accumulator <- case initialAccumulator of
-          Nothing -> (affable $ klank.accumulator)
-          Just acc -> pure acc
+        accumulator <- affable $ klank.accumulator
         worklets <- (affable $ klank.worklets prevWorklets)
         -------------
         ----- maybe it's just superstition
@@ -207,6 +202,31 @@ stopKlank = do
   H.modify_ (_ { stopFn = Nothing, audioCtx = Nothing, playerSubscriptionId = Nothing })
   maybe (pure unit) H.liftEffect sfn
   maybe (pure unit) (H.liftEffect <<< stopAudioContext) ctx
-foreign import getInitialAccumulator :: forall accumulator. Maybe accumulator -> (accumulator -> Maybe accumulator) -> Effect (Maybe accumulator)
 
 foreign import canvasDimensionHack :: Effect Unit
+
+fetchAssets :: forall m r accumulator env.
+  Bind m =>
+  MonadState {
+    buffers :: Object BrowserAudioBuffer
+  , images :: Object HTMLImageElement
+  , videos :: Object HTMLVideoElement
+  , canvases :: Object HTMLCanvasElement 
+  , effectfulKlank :: Effect (Klank'' accumulator env)
+  | r } m =>
+  MonadEffect m =>
+  MonadAff m =>
+  m Unit
+fetchAssets = do
+  prevBuffers <- H.gets _.buffers
+  prevImages <- H.gets _.images
+  prevVideos <- H.gets _.videos
+  prevCanvases <- H.gets _.canvases
+  klank' <- H.gets _.effectfulKlank
+  klank <- H.liftEffect klank'
+  ctx <- H.liftEffect makeAudioContext
+  buffers <- H.liftAff (affable $ klank.buffers ctx prevBuffers)
+  images <- H.liftAff (affable $ klank.images prevImages)
+  videos <- H.liftAff (affable $ klank.videos prevVideos)
+  canvases <- H.liftAff (affable $ klank.canvases prevCanvases)
+  H.modify_ (_ { buffers = buffers, images = images, videos = videos, canvases = canvases })

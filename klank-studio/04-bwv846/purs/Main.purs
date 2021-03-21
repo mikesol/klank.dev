@@ -1,25 +1,22 @@
 module Main where
 
 import Prelude
-import Control.Promise (toAffE)
-import Data.List (List(..))
-import Data.NonEmpty ((:|))
-import Data.Traversable (sequence)
-import Effect (Effect)
-import FRP.Behavior.Audio (AudioUnit, decodeAudioDataFromUri, defaultParam, playBufT_, runInBrowser_, speaker)
-import Halogen.Aff as HA
-import Halogen.VDom.Driver (runUI)
-import Klank.Dev.Util (affable)
-import Klank.Weblib.Studio as Studio
-import Type.Klank.Dev (Klank, Buffers, klank)
 import Data.Array (drop, foldl, length, mapWithIndex, range, take, zipWith)
 import Data.Int (toNumber)
+import Data.List (List(..))
 import Data.List as L
+import Data.NonEmpty ((:|))
+import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Typelevel.Num (D2)
-import Effect.Aff (parallel, sequential)
+import Effect (Effect)
 import Effect.Random (random)
-import Foreign.Object as O
+import FRP.Behavior.Audio (AudioUnit, defaultParam, playBufT_, runInBrowser_, speaker)
+import Halogen.Aff as HA
+import Halogen.VDom.Driver (runUI)
+import Klank.Dev.Util (makeBuffersKeepingCache)
+import Klank.Weblib.Studio as Studio
+import Type.Klank.Dev (Klank, Buffers, klank)
 
 kr = 20.0 / 1000.0 :: Number
 
@@ -152,26 +149,16 @@ scene pc t =
     )
 
 buffers :: Buffers
-buffers ctx _ =
-  affable
-    $ sequential
-    $ sequence
-        ( O.fromFoldable
-            $ map
-                ( \i ->
-                    Tuple (show i)
-                      $ ( parallel
-                            $ toAffE
-                                ( decodeAudioDataFromUri
-                                    ctx
-                                    $ "https://sound.klank.dev/petit-italien-k2/jeu-1/"
-                                    <> show i
-                                    <> ".mp3"
-                                )
-                        )
-                )
-                (range 12 63)
+buffers =
+  makeBuffersKeepingCache 20
+    $ map
+        ( \i ->
+            Tuple (show i)
+              $ "https://sound.klank.dev/petit-italien-k2/jeu-1/"
+              <> show i
+              <> ".mp3"
         )
+        (range 12 63)
 
 playMe :: Klank
 playMe =
@@ -202,7 +189,8 @@ playMe =
             zipWith
               ( \aj (PVD a b d) ->
                   ( PVD a
-                      (b + (0.02 * (foldl (+) 0.0 $ take aj additiveJank)))
+                      -- start the piece one beat ahead to give it time to load
+                      (b + 1.0 + (0.02 * (foldl (+) 0.0 $ take aj additiveJank)))
                       d
                   )
               )
