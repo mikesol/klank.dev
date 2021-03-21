@@ -19,10 +19,10 @@ import Klank.Weblib.AppAction (Action(..))
 import Klank.Weblib.CanvasComponent as CanvasComponent
 import Klank.Weblib.ClickPlayModal (clickPlay)
 import Klank.Weblib.LoadingModal (loading)
+import Klank.Weblib.Shared (playKlank, stopper, getInitialAccumulator, canvasDimensionHack)
 import Type.Klank.Dev (Klank'')
 import Type.Proxy (Proxy(..))
 import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
-import Klank.Weblib.Shared (playKlank, stopper, getInitialAccumulator, canvasDimensionHack)
 
 type EffectfulKlank accumulator env
   = Effect (Klank'' accumulator env)
@@ -141,8 +141,16 @@ handleAction = case _ of
   PlayKlankFromModal -> do
     H.modify_ (_ { playModalOpen = false })
     playKlank
+      { playStartFailed: PlayStartFailed
+      , playStartSucceeded: PlayStartSucceeded
+      , recordingRegistered: RecordingRegistered
+      }
   PlayKlankFromPlayButton -> do
     playKlank
+      { playStartFailed: PlayStartFailed
+      , playStartSucceeded: PlayStartSucceeded
+      , recordingRegistered: RecordingRegistered
+      }
   ProgressUpdate n -> do
     H.modify_ (_ { downloadProgress = Just n })
   PlayKlankFromStopButton -> do

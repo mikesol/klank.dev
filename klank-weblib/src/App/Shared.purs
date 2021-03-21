@@ -11,25 +11,62 @@ import Effect.Aff (Aff, makeAff, try)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Exception (Error)
-import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserMicrophone, BrowserPeriodicWave, MediaRecorder, audioWorkletAddModule, makeAudioContext)
+import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserMicrophone, BrowserPeriodicWave, MediaRecorder, RecorderSignature, audioWorkletAddModule, makeAudioContext)
 import Foreign.Object (Object)
 import Foreign.Object as O
 import Graphics.Canvas (CanvasElement)
 import Halogen as H
 import Halogen.Subscription as HS
-import Klank.Weblib.AppAction (Action(..))
 import Type.Klank.Dev (Klank'')
 import Unsafe.Coerce (unsafeCoerce)
 import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
 
-type PlayKlank = ∀ (t315 ∷ Type -> Type) (t316 ∷ Type) (t317 ∷ Row Type) (t380 ∷ Type) (accumulator ∷ Type) (t583 ∷ Type) (t593 ∷ Type) (t603 ∷ Type) (t621 ∷ Type) (t650 ∷ Type) (t675 ∷ Type) (env ∷ Type) (t681 ∷ Row Type) (t724 ∷ Row Type). MonadEffect t315 ⇒ MonadAff t315 ⇒ H.HalogenM { audioCtx ∷ Maybe AudioContext , buffers ∷     Object BrowserAudioBuffer
- , canvases ∷     Object HTMLCanvasElement
- , effectfulKlank ∷ Effect (Klank'' accumulator env) , floatArrays ∷     Object BrowserFloatArray
- , images ∷     Object HTMLImageElement
- , initialAccumulator ∷ Maybe accumulator , periodicWaves ∷     Object BrowserPeriodicWave
- , playerSubscriptionId ∷ Maybe H.SubscriptionId , recorders ∷ Object (MediaRecorder -> Effect Unit) , stopFn ∷ Maybe (Effect Unit) , tracks ∷ Object BrowserAudioTrack
- , videos ∷     Object HTMLVideoElement
- , worklets ∷ Array String | t724 } Action t317 t316 t315 Unit
+type PlayerUpdate
+  = { stopFn :: Maybe (Effect Unit)
+    , isPlaying :: Maybe Boolean
+    , periodicWaves :: Object BrowserPeriodicWave
+    , audioCtx :: Maybe AudioContext
+    , recorders :: Object (RecorderSignature MediaRecorder)
+    , worklets :: Array String
+    , tracks :: Object BrowserAudioTrack
+    , buffers :: Object BrowserAudioBuffer
+    , floatArrays :: Object BrowserFloatArray
+    }
+
+type PlayKlank =
+  forall 
+    (m :: Type -> Type)
+    (output :: Type)
+    (slots :: Row Type)
+    (accumulator :: Type)
+    (env :: Type)
+    (action :: Type)
+    (r :: Row Type).
+    MonadEffect m =>
+    MonadAff m =>
+    {
+      playStartFailed :: String -> action
+    , playStartSucceeded :: PlayerUpdate -> action
+    , recordingRegistered :: String -> String -> action
+    } ->
+    H.HalogenM {
+      audioCtx :: Maybe AudioContext
+    , buffers :: Object BrowserAudioBuffer
+    , canvases :: Object HTMLCanvasElement
+    , effectfulKlank :: Effect (Klank'' accumulator env)
+    , floatArrays :: Object BrowserFloatArray
+    , images :: Object HTMLImageElement
+    , initialAccumulator :: Maybe accumulator
+    , periodicWaves :: Object BrowserPeriodicWave
+    , playerSubscriptionId :: Maybe H.SubscriptionId
+    , recorders :: Object (MediaRecorder -> Effect Unit)
+    , stopFn :: Maybe (Effect Unit)
+    , tracks :: Object BrowserAudioTrack
+    , videos :: Object HTMLVideoElement
+    , worklets :: Array String
+    | r
+    }
+    action slots output m Unit
 foreign import data BrowserMediaStream :: Type
 
 foreign import loadCustomAudioNodes :: AudioContext -> Effect (Promise Unit)
@@ -58,7 +95,7 @@ affable f =
 foreign import canvasOrBust :: Effect CanvasElement
 
 playKlank :: PlayKlank
-playKlank = do
+playKlank actions = do
   stopper
   oldSubId <- H.gets _.playerSubscriptionId
   maybe (pure unit) H.unsubscribe oldSubId
@@ -89,7 +126,9 @@ playKlank = do
   H.liftAff do
     res <-
       try do
-        { microphone, camera } <- if klank.enableMicrophone || klank.enableCamera then getMicrophoneAndCamera klank.enableMicrophone klank.enableCamera else pure { microphone: Nothing, camera: Nothing }
+        { microphone, camera } <- case klank.enableMicrophone || klank.enableCamera of 
+          true -> getMicrophoneAndCamera klank.enableMicrophone klank.enableCamera
+          false -> pure { microphone: Nothing, camera: Nothing }
         let
           microphones = maybe O.empty (O.singleton "microphone") microphone
         cameraAsVideo <- case camera of
@@ -114,7 +153,7 @@ playKlank = do
           affable
             $ klank.recorders
                 O.empty
-                ( \k v -> HS.notify listener (RecordingRegistered k v)
+                ( \k v -> HS.notify listener (actions.recordingRegistered k v)
                 )
                 prevRecorders
         floatArrays <- affable $ klank.floatArrays prevFloatArrays
@@ -151,13 +190,13 @@ playKlank = do
           }
     H.liftEffect
       $ case res of
-          Left err -> HS.notify listener (PlayStartFailed (show err))
-          Right resp -> H.liftEffect $ HS.notify listener (PlayStartSucceeded resp)
+          Left err -> HS.notify listener (actions.playStartFailed (show err))
+          Right resp -> H.liftEffect $ HS.notify listener (actions.playStartSucceeded resp)
   H.modify_ (_ { playerSubscriptionId = Just subId })
   pure unit
 
 
-type Stopper = ∀ t32 t33 t34 t35 t42. MonadEffect t32 => H.HalogenM { audioCtx ∷ Maybe AudioContext, playerSubscriptionId ∷ Maybe H.SubscriptionId, stopFn ∷ Maybe (Effect Unit) | t42 } t35 t34 t33 t32 Unit
+type Stopper = forall t32 t33 t34 t35 t42. MonadEffect t32 => H.HalogenM { audioCtx :: Maybe AudioContext, playerSubscriptionId :: Maybe H.SubscriptionId, stopFn :: Maybe (Effect Unit) | t42 } t35 t34 t33 t32 Unit
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
 

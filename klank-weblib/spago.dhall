@@ -9,7 +9,6 @@
   , "halogen"
   , "klank-lib"
   , "painting"
-  , "parsing"
   , "psci-support"
   ]
 , packages = ./packages.dhall
