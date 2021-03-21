@@ -96,6 +96,7 @@ component effectfulKlank =
           $ H.defaultEval
               { handleAction = handleAction
               , initialize = Just Initialize
+              , finalize = Just Finalize
               }
     }
 
@@ -183,3 +184,4 @@ handleAction = case _ of
       )
   PlayStartFailed s -> pure mempty
   RecordingRegistered k v -> pure mempty
+  Finalize -> stopKlank

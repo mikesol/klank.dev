@@ -1,4 +1,4 @@
-{ name = "halogen-project"
+{ name = "silent-night"
 , dependencies =
   [ "audio-behaviors"
   , "console"
@@ -10,5 +10,5 @@
   , "psci-support"
   ]
 , packages = ./packages.dhall
-, sources = [ "purs/**/*.purs" ]
+, sources = [ "src/**/*.purs" ]
 }
