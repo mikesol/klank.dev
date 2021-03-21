@@ -96,7 +96,7 @@ foreign import canvasOrBust :: Effect CanvasElement
 
 playKlank :: PlayKlank
 playKlank actions = do
-  stopper
+  stopKlank
   oldSubId <- H.gets _.playerSubscriptionId
   maybe (pure unit) H.unsubscribe oldSubId
   klank' <- H.gets _.effectfulKlank
@@ -196,12 +196,12 @@ playKlank actions = do
   pure unit
 
 
-type Stopper = forall m output slots action r. MonadEffect m => H.HalogenM { audioCtx :: Maybe AudioContext, playerSubscriptionId :: Maybe H.SubscriptionId, stopFn :: Maybe (Effect Unit) | r } action slots output m Unit
+type StopKlank = forall m output slots action r. MonadEffect m => H.HalogenM { audioCtx :: Maybe AudioContext, playerSubscriptionId :: Maybe H.SubscriptionId, stopFn :: Maybe (Effect Unit) | r } action slots output m Unit
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
 
-stopper :: Stopper
-stopper = do
+stopKlank :: StopKlank
+stopKlank = do
   sfn <- H.gets _.stopFn
   ctx <- H.gets _.audioCtx
   H.modify_ (_ { stopFn = Nothing, audioCtx = Nothing, playerSubscriptionId = Nothing })

@@ -19,7 +19,7 @@ import Klank.Weblib.AppAction (Action(..))
 import Klank.Weblib.CanvasComponent as CanvasComponent
 import Klank.Weblib.ClickPlayModal (clickPlay)
 import Klank.Weblib.LoadingModal (loading)
-import Klank.Weblib.Shared (playKlank, stopper, getInitialAccumulator, canvasDimensionHack)
+import Klank.Weblib.Shared (playKlank, stopKlank, getInitialAccumulator, canvasDimensionHack)
 import Type.Klank.Dev (Klank'')
 import Type.Proxy (Proxy(..))
 import Web.HTML (HTMLCanvasElement, HTMLImageElement, HTMLVideoElement)
@@ -154,7 +154,7 @@ handleAction = case _ of
   ProgressUpdate n -> do
     H.modify_ (_ { downloadProgress = Just n })
   PlayKlankFromStopButton -> do
-    stopper
+    stopKlank
     H.modify_ (_ { isPlaying = Just false })
   Initialize -> do
     H.liftEffect canvasDimensionHack
