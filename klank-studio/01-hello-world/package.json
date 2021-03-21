@@ -21,6 +21,6 @@
   "scripts": {
     "postinstall": "spago install && spago build",
     "start": "webpack serve --mode=development --open",
-    "build": "export NODE_ENV=production && webpack"
+    "build": "webpack"
   }
 }
