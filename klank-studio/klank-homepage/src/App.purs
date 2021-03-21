@@ -102,15 +102,17 @@ component =
               }
     }
 
-parProps = [ HP.classes $ map ClassName [ "sm:text-3xl", "md:text-2xl", "lg:text-xl" ] ]
+parText = [ "sm:text-3xl", "md:text-2xl", "lg:text-xl" ]
+
+parProps = [ HP.classes $ map ClassName (parText <> [ "p-6" ]) ]
 
 makeLi :: ∀ (w ∷ Type). String → String → WhichKlank → HH.HTML w Action
 makeLi name ghName whichKlank =
-  HH.li parProps
+  HH.li [ HP.classes $ map ClassName (parText <> [ "p-2" ]) ]
     [ HH.text $ name <> " | "
-    , HH.a [ HP.href $ "/#/" <> toHash (InKlank whichKlank) ] [ HH.text "play me" ]
+    , HH.a [ HP.classes $ map ClassName [ "underline" ], HP.href $ "/#/" <> toHash (InKlank whichKlank) ] [ HH.text "play me" ]
     , HH.text " | "
-    , HH.a [ HP.href $ "https://github.com/mikesol/klank.dev/tree/klank/klank-studio/" <> ghName ] [ HH.text "view on GitHub" ]
+    , HH.a [ HP.classes $ map ClassName [ "underline" ], HP.href $ "https://github.com/mikesol/klank.dev/tree/klank/klank-studio/" <> ghName ] [ HH.text "view on GitHub" ]
     ]
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action ChildSlots m
@@ -118,18 +120,18 @@ render { whereAmI } =
   HH.div [ HP.classes $ map ClassName [ "h-screen", "w-screen" ] ] case whereAmI of
     Home ->
       [ HH.p
-          [ HP.classes $ map ClassName [ "sm:text-5xl", "md:text-4xl", "lg:text-3xl", "font-bold" ]
+          [ HP.classes $ map ClassName [ "sm:text-5xl", "md:text-4xl", "lg:text-3xl", "font-bold", "pl-6", "pt-8", "pr-8", "pb-8" ]
           ]
           [ HH.text "Welcome to klank.dev!" ]
       , HH.p parProps
-          [ HH.text "klank.dev is a browser-based media creation studio. It allows for the creation of interactive audio and visual works.  The project is free and open-source and is hosted on "
-          , HH.a [ HP.href "https://github.com/mikesol/klank.dev" ] [ HH.text "GitHub" ]
+          [ HH.text "klank.dev is a browser-based media creation studio. The project is free and open-source and is hosted on "
+          , HH.a [ HP.classes $ map ClassName [ "underline" ], HP.href "https://github.com/mikesol/klank.dev" ] [ HH.text "GitHub" ]
           , HH.text ". Documentation for getting started is also available on the GitHub repo."
           ]
       , HH.p parProps
           [ HH.text "Below are links to some exampes created using klank.dev. All of the examples are available on the git repo as well."
           ]
-      , HH.ul_
+      , HH.ul [ HP.classes $ map ClassName [ "list-disc", "list-inside", "p-3" ] ]
           [ makeLi "hello world" "01-hello-world" HelloWorld
           , makeLi "waves" "02-waves" Waves
           , makeLi "atari" "03-atari" Atari
