@@ -22,6 +22,8 @@ import FRP.Behavior (Behavior)
 import FRP.Behavior.Audio (AV(..), CanvasInfo(..), defaultExporter, gain_, makePeriodicWave, runInBrowser_, speaker')
 import Foreign.Object as O
 import Graphics.Painting.Font (FontOptions, bold, italic)
+import Halogen.Aff as HA
+import Halogen.VDom.Driver (runUI)
 import Klank.Dev.Util (makeBuffersKeepingCache)
 import Klank.Studio.SilentNight.AudioFiles (audioFiles)
 import Klank.Studio.SilentNight.Bells (baseBells, bells)
@@ -38,27 +40,11 @@ import Klank.Studio.SilentNight.Snow (baseSnows, snow, snowL)
 import Klank.Studio.SilentNight.Square (square)
 import Klank.Studio.SilentNight.Triangle (triangle)
 import Klank.Studio.SilentNight.Types (AudioListD2)
-import Klank.Studio.SilentNight.Types.Accumulator
-  ( Activity(..)
-  , MusicM
-  , PlayerEvent(..)
-  , SilentNightAccumulator
-  , defaultAudioMarkers
-  )
-import Klank.Studio.SilentNight.Types.Intro
-  ( HarmChooserStep(..)
-  , Verse(..)
-  , VerseChoice(..)
-  )
-import Klank.Studio.SilentNight.Util
-  ( crotchet
-  , pieceInMeasures
-  , silentNightEngineInfo
-  , tempo
-  , timeToMusicalInfo
-  , toNel
-  )
+import Klank.Studio.SilentNight.Types.Accumulator (Activity(..), MusicM, PlayerEvent(..), SilentNightAccumulator, defaultAudioMarkers)
+import Klank.Studio.SilentNight.Types.Intro (HarmChooserStep(..), Verse(..), VerseChoice(..))
+import Klank.Studio.SilentNight.Util (crotchet, pieceInMeasures, silentNightEngineInfo, tempo, timeToMusicalInfo, toNel)
 import Klank.Studio.SilentNight.Verse (verses)
+import Klank.Weblib.Studio as Studio
 import Math ((%))
 import Type.Klank.Dev (Klank'')
 
@@ -301,3 +287,9 @@ playMe =
   , worklets: \prev res _ -> res prev
   , webcamCache: \_ _ -> L.take 10
   }
+
+main :: Effect Unit
+main =
+  HA.runHalogenAff do
+    body <- HA.awaitBody
+    runUI (Studio.component (pure playMe)) unit body
