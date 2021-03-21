@@ -1,10 +1,6 @@
 module Klank.Weblib.AppAction where
 
-import Prelude
-import Data.Maybe (Maybe)
-import Effect (Effect)
-import FRP.Behavior.Audio (AudioContext, BrowserAudioBuffer, BrowserAudioTrack, BrowserFloatArray, BrowserPeriodicWave, MediaRecorder, RecorderSignature)
-import Foreign.Object (Object)
+import Klank.Weblib.Shared (PlayerUpdate)
 
 data Action
   = Initialize

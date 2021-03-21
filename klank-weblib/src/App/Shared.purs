@@ -196,7 +196,7 @@ playKlank actions = do
   pure unit
 
 
-type Stopper = forall t32 t33 t34 t35 t42. MonadEffect t32 => H.HalogenM { audioCtx :: Maybe AudioContext, playerSubscriptionId :: Maybe H.SubscriptionId, stopFn :: Maybe (Effect Unit) | t42 } t35 t34 t33 t32 Unit
+type Stopper = forall m output slots action r. MonadEffect m => H.HalogenM { audioCtx :: Maybe AudioContext, playerSubscriptionId :: Maybe H.SubscriptionId, stopFn :: Maybe (Effect Unit) | r } action slots output m Unit
 
 foreign import stopAudioContext :: AudioContext -> Effect Unit
 
