@@ -1,29 +1,16 @@
 module Main where
 
 import Prelude
+import Data.Typelevel.Num (D1)
 import Effect (Effect)
+import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker')
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
-import Data.List ((:), List(..))
-import Data.NonEmpty ((:|))
-import Data.Typelevel.Num (D1)
-import FRP.Behavior (Behavior)
-import FRP.Behavior.Audio (AudioUnit, gain', runInBrowser, sinOsc, speaker)
-import Math (pi, sin, cos)
-import Type.Klank.Dev (Klank, klank)
 import Klank.Weblib.Studio as Studio
+import Type.Klank.Dev (Klank, klank)
 
-scene :: Number -> Behavior (AudioUnit D1)
-scene time =
-  pure
-    ( speaker
-        ( (gain' (0.1 + (-0.1) * cos (0.5 * rad)) (sinOsc $ 440.0 + 6.0 * (sin (0.1 * rad))))
-            :| (gain' (0.1 + (-0.1) * cos (0.47 * rad)) (sinOsc $ 330.0 + 4.0 * (sin (0.2 * rad))))
-            : Nil
-        )
-    )
-  where
-  rad = pi * time
+scene :: AudioUnit D1
+scene = speaker' (gain' 0.2 (sinOsc $ 440.0))
 
 playMe :: Klank
 playMe =
