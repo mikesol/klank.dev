@@ -1,4 +1,4 @@
-module Main where
+module Klank.Studio.HelloWorld where
 
 import Prelude
 import Data.Typelevel.Num (D1)

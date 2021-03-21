@@ -1,4 +1,4 @@
-module Main where
+module Klank.Studio.BWV846 where
 
 import Prelude
 import Data.Array (drop, foldl, length, mapWithIndex, range, take, zipWith)

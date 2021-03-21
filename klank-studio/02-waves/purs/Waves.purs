@@ -1,4 +1,4 @@
-module Main where
+module Klank.Studio.Waves where
 
 import Prelude
 import Effect (Effect)

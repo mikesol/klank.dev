@@ -1,3 +1,3 @@
 import "./style.css";
-var main = require("../output/Main/index.js");
+var main = require("../output/Klank.Studio.Atari/index.js");
 main.main();

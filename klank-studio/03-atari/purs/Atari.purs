@@ -1,4 +1,4 @@
-module Main where
+module Klank.Studio.Atari where
 
 import Prelude
 import Control.Promise (toAffE)
